@@ -1,0 +1,6 @@
+<svg width="16" height="16" version="1.1" xmlns="http://www.w3.org/2000/svg">
+    <path d="m1 1h9v10h-9v-10" style="fill:none;stroke-linecap:square;stroke-width:1px;stroke:#000000"/>
+    <path d="m1 7 3-3 6 4" style="fill:none;stroke-width:1px;stroke:#000000"/>
+    <path d="m13 15v-4" style="fill:none;stroke-width:1px;stroke:#000000"/>
+    <path d="m11 13h4" style="fill:none;stroke-width:1px;stroke:#000000"/>
+</svg>
