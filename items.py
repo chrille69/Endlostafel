@@ -3,7 +3,7 @@ from math import sqrt, log10
 from PySide6.QtCore import QPointF, QRectF, Qt
 from PySide6.QtGui import QBrush, QColor, QPainterPath, QPalette, QPen, QPixmap
 from PySide6.QtSvgWidgets import QGraphicsSvgItem
-from PySide6.QtWidgets import QApplication, QGraphicsItem, QGraphicsLineItem, QGraphicsPathItem, QGraphicsPixmapItem, QGraphicsRectItem, QGraphicsView
+from PySide6.QtWidgets import QApplication, QGraphicsEllipseItem, QGraphicsItem, QGraphicsLineItem, QGraphicsPathItem, QGraphicsPixmapItem, QGraphicsRectItem, QGraphicsView
 
 
 
@@ -66,26 +66,38 @@ class Pfad(QGraphicsPathItem):
         clonepfad.change()
         return clonepfad
 
-    def removeElements(self, shape: QRectF):
+    def removeElements(self, ellipse: QGraphicsEllipseItem):
         neupfad = QPainterPath()
         anzahl = self.path().elementCount()
-        geschnitten = True
-        for i in range(anzahl):
-            element = self.path().elementAt(i)
-            pos = QPointF(element.x, element.y)
-            if not shape.contains(self.mapToScene(pos)):
-                if geschnitten:
-                    geschnitten=False
-                    neupfad.moveTo(pos)
-                else:
-                    if element.isLineTo():
-                        neupfad.lineTo(pos)
-                    else:
+        if anzahl > 1:
+            geschnitten = True
+            for i in range(anzahl):
+                element = self.path().elementAt(i)
+                pos = QPointF(element.x, element.y)
+                linienschnitt = False
+                if i > 0:
+                    vorelement = self.path().elementAt(i-1)
+                    vorpos = QPointF(vorelement.x, vorelement.y)
+                    linienschnitt = self.schnittLinieKreis(self.mapToScene(vorpos), self.mapToScene(pos), ellipse.rect().center(), ellipse.rect().height()/2)
+                if not (ellipse.shape().contains(self.mapToScene(pos)) or linienschnitt):
+                    if geschnitten:
+                        geschnitten=False
                         neupfad.moveTo(pos)
-            else:
-                geschnitten=True
+                    else:
+                        if element.isLineTo():
+                            neupfad.lineTo(pos)
+                        else:
+                            neupfad.moveTo(pos)
+                else:
+                    geschnitten=True
         self.setPath(neupfad)
         self.setTransformOriginPoint(self.boundingRect().center())
+
+    def schnittLinieKreis(self, pos1, pos2, m, r):
+        n = QPointF(pos2.y()-pos1.y(),pos1.x()-pos2.x())
+        d = abs(((m.x()-pos1.x())*n.x()+(m.y()-pos1.y())*n.y()) / sqrt(n.x()*n.x()+n.y()*n.y()))
+        return d < r
+
 
 
 

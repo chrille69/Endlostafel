@@ -291,15 +291,12 @@ class Tafelview(QGraphicsView):
             if self._status == Tafelview.statusRadiere:
                 durchmesser = self._radiererpen.widthF()
                 ellipse = QGraphicsEllipseItem(QRectF(pos-QPointF(durchmesser/2,durchmesser/2),QSizeF(durchmesser,durchmesser)))
-                shape = ellipse.shape()
-                for item in self.scene().items(shape):
+                for item in self.scene().items(ellipse.shape()):
                     try:
-                        item.removeElements(shape)
-                        print(item.path().elementCount())
+                        item.removeElements(ellipse)
                         if item.path().elementCount() < 2:
                             self.scene().removeItem(item)
                     except AttributeError:
-                        # Vermutlich wegen removeElements
                         pass
                 return True
 
