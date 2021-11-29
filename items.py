@@ -74,12 +74,13 @@ class Pfad(QGraphicsPathItem):
             for i in range(anzahl):
                 element = self.path().elementAt(i)
                 pos = QPointF(element.x, element.y)
-                linienschnitt = False
-                if i > 0:
-                    vorelement = self.path().elementAt(i-1)
-                    vorpos = QPointF(vorelement.x, vorelement.y)
-                    linienschnitt = self.schnittLinieKreis(self.mapToScene(vorpos), self.mapToScene(pos), ellipse.rect().center(), ellipse.rect().height()/2)
-                if not (ellipse.shape().contains(self.mapToScene(pos)) or linienschnitt):
+                #linienschnitt = False
+                #if i > 0:
+                #    vorelement = self.path().elementAt(i-1)
+                #    vorpos = QPointF(vorelement.x, vorelement.y)
+                #    linienschnitt = self.schnittLinieKreis(self.mapToScene(vorpos), self.mapToScene(pos), ellipse.rect().center(), ellipse.rect().height()/2)
+                #if not (ellipse.shape().contains(self.mapToScene(pos)) or linienschnitt):
+                if not ellipse.shape().contains(self.mapToScene(pos)):
                     if geschnitten:
                         geschnitten=False
                         neupfad.moveTo(pos)
