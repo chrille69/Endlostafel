@@ -6,6 +6,7 @@ from PySide6.QtSvgWidgets import QGraphicsSvgItem
 from PySide6.QtWidgets import QApplication, QGraphicsItem, QGraphicsLineItem, QGraphicsPathItem, QGraphicsPixmapItem, QGraphicsRectItem, QGraphicsView
 
 
+
 class Pfad(QGraphicsPathItem):
     def __init__(self, view: QGraphicsView, pos: QPointF, pen: QPen, brush: QBrush):
         super().__init__()
