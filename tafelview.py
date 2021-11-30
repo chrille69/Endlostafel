@@ -1,8 +1,8 @@
 
 from PySide6 import QtCore
-from PySide6.QtCore import QEvent, QLineF, QPointF, QRect, QRectF, QSizeF, Qt, Signal
-from PySide6.QtGui import QBrush, QColor, QPainter, QPainterPath, QPalette, QPen, QResizeEvent, QTransform
-from PySide6.QtWidgets import QApplication, QGraphicsEllipseItem, QGraphicsItem, QGraphicsItemGroup, QGraphicsLineItem, QGraphicsPolygonItem, QGraphicsScene, QGraphicsView, QMessageBox, QToolButton, QWidget
+from PySide6.QtCore import QEvent, QLineF, QPointF, QRect, QRectF, QSizeF, Qt, Signal, qWarning
+from PySide6.QtGui import QBrush, QColor, QPainter, QPalette, QPen, QResizeEvent, QTransform
+from PySide6.QtWidgets import QApplication, QGraphicsEllipseItem, QGraphicsScene, QGraphicsView, QMessageBox, QToolButton, QWidget
 
 from icons import getNameCursor, getIconSvg
 from items import Ellipse, Kreis, Line, Pfad, Pfeil, Punkt, Quadrat, Rechteck, Stift
@@ -246,13 +246,18 @@ class Tafelview(QGraphicsView):
     def viewportEvent(self, event: QtCore.QEvent) -> bool:
 
         if event.type() in [QEvent.TouchBegin, QEvent.MouseButtonPress]:
+            qWarning('Event '+str(event.type()))
+
             pos = self.scenePosFromEvent(event)
-         
+            qWarning('pos '+str(pos))
+
             self._totalTransform = self.transform()
             self._verschiebeGeo = self._geodreieck.posInVerschiebegriff(pos)
             self._dreheGeo = self._geodreieck.posInDrehgriff(pos)
             if self._status in [Tafelview.statusEdit, Tafelview.statusRadiere]:
                 return super().viewportEvent(event)
+            
+            qWarning('item '+str(self._currentItem))
             if not self._verschiebeGeo and not self._dreheGeo:
                 pos = self.snapToGeodreieck(pos)
                 self.setLastPos(pos)
@@ -260,7 +265,11 @@ class Tafelview(QGraphicsView):
             return True
 
         elif event.type() in [QEvent.TouchUpdate, QEvent.MouseMove]:
+            qWarning('Event '+str(event.type()))
+
             pos = self.scenePosFromEvent(event)
+            qWarning('pos '+str(pos))
+
             if event.type() == QEvent.TouchUpdate:
                 touchpoints = event.points()
                 if len(touchpoints) == 2:
@@ -289,17 +298,16 @@ class Tafelview(QGraphicsView):
             if self._status == self.statusEdit:
                 return super().viewportEvent(event)
             if self._status == Tafelview.statusRadiere:
-                durchmesser = self._radiererpen.widthF()
+                durchmesser = self._radiererpen.widthF()/self.transform().m11()
                 ellipse = QGraphicsEllipseItem(QRectF(pos-QPointF(durchmesser/2,durchmesser/2),QSizeF(durchmesser,durchmesser)))
                 for item in self.scene().items(ellipse.shape()):
-                    try:
+                    if hasattr(item,'removeElements') and callable(item.removeElements):
                         item.removeElements(ellipse)
-                        if item.path().elementCount() < 2:
-                            self.scene().removeItem(item)
-                    except AttributeError:
-                        pass
+                    if item.path().elementCount() < 2:
+                        self.scene().removeItem(item)
                 return True
 
+            qWarning('item '+str(self._currentItem))
             pos = self.snapToGeodreieck(pos)
             if not self._currentItem:
                 self.createCurrentItem(pos)
@@ -307,6 +315,9 @@ class Tafelview(QGraphicsView):
             return True
                 
         elif event.type() in [QEvent.TouchEnd, QEvent.MouseButtonRelease]:
+            qWarning('Event '+str(event.type()))
+            qWarning('item '+str(self._currentItem))
+
             self._verschiebeGeo = False
             self._dreheGeo = False
 
@@ -314,6 +325,7 @@ class Tafelview(QGraphicsView):
                 return super().viewportEvent(event)
 
             pos = self.scenePosFromEvent(event)
+            qWarning('pos '+str(pos))
             pos = self.snapToGeodreieck(pos)
             if pos == self._lastPos:   # MouseClick
                 if self._status == Tafelview.statusFreihand:
