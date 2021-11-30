@@ -23,7 +23,7 @@ Folgende Funktionen stehen zur Verfügung:
 * Linien
 * Pfeile
 * Einfache geometrische Formen wie Kreise, Ellipsen, Quadrate und Rechtecke
-* Kariertes, liniertes Papier, Logarithmuspapier, Millimeterpapier
+* Kariertes Papier, liniertes Papier, Logarithmuspapier, Millimeterpapier
 * Einblenden eines Geodreiecks
 * Verschieben und Löschen einzelner Elemente
 * Speichern der Inhalte als SVG-Dateien
