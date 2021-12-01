@@ -16,10 +16,10 @@ Es ist kein Zeichenprogramm.
 ## Funktionsumfang
 Folgende Funktionen stehen zur Verfügung:
 
-* Hell- und Dukelmodus
+* Hell- und Dunkelmodus
 * Vollbildschirm
 * Vier vordefinierte Farben
-* Vier vordefinierte Schriftgrößen
+* Vier vordefinierte Stiftgrößen
 * Linien
 * Pfeile
 * Einfache geometrische Formen wie Kreise, Ellipsen, Quadrate und Rechtecke
@@ -29,4 +29,4 @@ Folgende Funktionen stehen zur Verfügung:
 * Speichern der Inhalte als SVG-Dateien
 * Laden von SVGs und Bitmaps
 * Speichern einiger weniger Voreinstellungen
-* Zoomen einzelner Elemente oder aller Elemente
+* Zoomen einzelner Elemente oder der gesamten Zeichenfläche
