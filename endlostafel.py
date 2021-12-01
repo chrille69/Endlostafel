@@ -1,4 +1,3 @@
-# Ronny was here
 
 import sys
 import logging
@@ -19,7 +18,7 @@ from tafelview import Tafelview
 from paletten import dark as paletteDark, light as paletteLight
 
 # Zum Erzeugen der exe:
-# pyinstaller.exe -F -i "oszli-icon.ico" -w sequenzeditor.py
+# pyinstaller.exe -F -i "oszli-icon.ico" -w endlostafel.py
 
 log = logging.getLogger(__name__)
 VERSION='1.17'
@@ -275,7 +274,6 @@ class Editor(QMainWindow):
         if appstate == Qt.ApplicationActive:
             self._fullscreenAction.setChecked(self.isFullScreen())
             self._tafelview.setSceneRectFromViewport()
-            self._tafelview.setRadiererColor()
             QApplication.instance().applicationStateChanged.disconnect()
 
     def event(self, ev: QEvent):

@@ -1,6 +1,6 @@
 
 from math import sqrt, log10
-from PySide6.QtCore import QPointF, QRectF, Qt
+from PySide6.QtCore import QPointF, Qt
 from PySide6.QtGui import QBrush, QColor, QPainterPath, QPalette, QPen, QPixmap
 from PySide6.QtSvgWidgets import QGraphicsSvgItem
 from PySide6.QtWidgets import QApplication, QGraphicsEllipseItem, QGraphicsItem, QGraphicsLineItem, QGraphicsPathItem, QGraphicsPixmapItem, QGraphicsRectItem, QGraphicsView
@@ -13,7 +13,6 @@ class Pfad(QGraphicsPathItem):
         self._view = view
         self._firstpos = pos
         self._fgcolor = view.fgcolor()
-        self._bgcolor = view.bgcolor()
         self.setPen(pen)
         self.setBrush(brush)
         self.setPath(QPainterPath(pos))
@@ -27,20 +26,15 @@ class Pfad(QGraphicsPathItem):
 
     def newPalette(self):
         newfgcolor = QApplication.instance().palette().color(QPalette.WindowText)
-        newbgcolor = QApplication.instance().palette().color(QPalette.Base)
         pen = self.pen()
         brush = self.brush()
         if pen.color() == self._fgcolor:
             pen.setColor(newfgcolor)
             self.setPen(pen)
-        elif pen.color() == self._bgcolor:
-            pen.setColor(newbgcolor)
-            self.setPen(pen)
         if brush.color() == self._fgcolor:
             brush.setColor(newfgcolor)
             self.setBrush(brush)
         self._fgcolor = newfgcolor
-        self._bgcolor = newbgcolor
     
     def disconnect(self):
         self._view.mousemoved.disconnect()

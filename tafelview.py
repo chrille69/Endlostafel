@@ -1,6 +1,6 @@
 
 from PySide6 import QtCore
-from PySide6.QtCore import QEvent, QLineF, QPointF, QRect, QRectF, QSizeF, Qt, Signal, qWarning
+from PySide6.QtCore import QEvent, QPointF, QRect, QRectF, QSizeF, Qt, Signal, qWarning
 from PySide6.QtGui import QBrush, QColor, QPainter, QPalette, QPen, QResizeEvent, QTransform
 from PySide6.QtWidgets import QApplication, QGraphicsEllipseItem, QGraphicsScene, QGraphicsView, QMessageBox, QToolButton, QWidget
 
@@ -40,7 +40,6 @@ class Tafelview(QGraphicsView):
 
     def __init__(self, parent: QWidget, qcolor: QColor=QColor(Qt.black), pensize: float=3, status: str=statusFreihand):
         super().__init__(parent)
-        #self.viewport().setAttribute(Qt.WA_AcceptTouchEvents)
         self._painting = False
         tafel = QGraphicsScene(self)
         self.setScene(tafel)
@@ -53,18 +52,15 @@ class Tafelview(QGraphicsView):
         self._verschiebeGeo: bool = None
         self._drawpen = QPen(qcolor, pensize, Qt.SolidLine, c=Qt.RoundCap, j=Qt.RoundJoin)
         self._drawpen.setCosmetic(True)
-        self._radiererpen = QPen(Qt.white, 6, Qt.SolidLine, c=Qt.RoundCap, j=Qt.RoundJoin)
-        self._radiererpen.setCosmetic(True)
         self._drawbrush = Qt.NoBrush
         self._arrowbrush = QBrush(QColor(qcolor))
         self._arrowpen = QPen(self._drawpen)
         self._arrowpen.setJoinStyle(Qt.MiterJoin)
+        self._radierdurchmesser = pensize*10
         self._currentpen: QPen = None
         self._currentbrush: QBrush = None
         self._totalTransform = self.transform()
         self._fgcolor = QApplication.instance().palette().color(QPalette.WindowText)
-        self._bgcolor = QApplication.instance().palette().color(QPalette.Base)
-        self._ereaser = None
 
         self.setRenderHint(QPainter.Antialiasing)
         self.setTransformationAnchor(QGraphicsView.AnchorViewCenter)
@@ -120,18 +116,10 @@ class Tafelview(QGraphicsView):
     def fgcolor(self):
         return self._fgcolor
 
-    def bgcolor(self):
-        return self._bgcolor
-
     def newPalette(self):
         self._status2cursor = self.initCursor()
         self.setCustomCursor()
         self._fgcolor = QApplication.instance().palette().color(QPalette.WindowText)
-        self._bgcolor = QApplication.instance().palette().color(QPalette.Base)
-        self.setRadiererColor()
-
-    def setRadiererColor(self):
-        self._radiererpen.setColor(self._bgcolor)
 
     def setPencolor(self, colorname):
         if colorname == 'foreground':
@@ -145,7 +133,7 @@ class Tafelview(QGraphicsView):
     def setPensize(self, pensize):
         self._drawpen.setWidthF(pensize)
         self._arrowpen.setWidthF(pensize)
-        self._radiererpen.setWidthF(10*pensize)
+        self._radierdurchmesser = pensize*10
         self.setCustomCursor()
 
     def centerGeodreieck(self):
@@ -171,7 +159,7 @@ class Tafelview(QGraphicsView):
 
     def setCustomCursor(self):
         if self._status == Tafelview.statusRadiere:
-            cursor = getNameCursor( 'erease-noborder',self._currentpen.widthF() if self._currentpen else 32)
+            cursor = getNameCursor('erease-noborder', self._radierdurchmesser)
         else:
             cursor = self._status2cursor[self._status]
         self.setCursor(cursor)
@@ -181,12 +169,12 @@ class Tafelview(QGraphicsView):
             raise ValueError(f'Unbekannter Status: {status}')
 
         self._status = status
+        self._painting = False
         self._dreheGeo = False
         self._verschiebeGeo = False
 
        # Edit-Modus der Items setzen
         if status == self.statusEdit:
-            # self.setDragMode(QGraphicsView.ScrollHandDrag)
             self.setDragMode(QGraphicsView.RubberBandDrag)
         else:
             self.setDragMode(QGraphicsView.NoDrag)
@@ -201,9 +189,6 @@ class Tafelview(QGraphicsView):
         elif status == self.statusPfeil:
             self._currentpen = self._arrowpen
             self._currentbrush = self._arrowbrush
-        elif status == self.statusRadiere:
-            self._currentpen = self._radiererpen
-            self._currentbrush = Qt.NoBrush
         else:
             self._currentpen = Qt.NoPen
             self._currentbrush = Qt.NoBrush
@@ -247,8 +232,8 @@ class Tafelview(QGraphicsView):
     def viewportEvent(self, event: QtCore.QEvent) -> bool:
 
         if event.type() == QEvent.MouseButtonPress:
-            qWarning('Event '+str(event.type()))
-            qWarning('painting '+str(self._painting))
+            #qWarning('Event '+str(event.type()))
+            #qWarning('painting '+str(self._painting))
 
             self._painting = True
             pos = self.scenePosFromEvent(event)
@@ -265,8 +250,8 @@ class Tafelview(QGraphicsView):
             return True
 
         elif event.type() == QEvent.MouseMove:
-            qWarning('Event '+str(event.type()))
-            qWarning('painting '+str(self._painting))
+            #qWarning('Event '+str(event.type()))
+            #qWarning('painting '+str(self._painting))
 
             pos = self.scenePosFromEvent(event)
 
@@ -286,7 +271,7 @@ class Tafelview(QGraphicsView):
             if self._status == self.statusEdit:
                 return super().viewportEvent(event)
             if self._status == Tafelview.statusRadiere:
-                durchmesser = self._radiererpen.widthF()/self.transform().m11()
+                durchmesser = self._radierdurchmesser/self.transform().m11()
                 ellipse = QGraphicsEllipseItem(QRectF(pos-QPointF(durchmesser/2,durchmesser/2),QSizeF(durchmesser,durchmesser)))
                 for item in self.scene().items(ellipse.shape()):
                     if hasattr(item,'removeElements') and callable(item.removeElements):
@@ -303,8 +288,8 @@ class Tafelview(QGraphicsView):
             return True
                 
         elif event.type() == QEvent.MouseButtonRelease:
-            qWarning('Event '+str(event.type()))
-            qWarning('painting '+str(self._painting))
+            #qWarning('Event '+str(event.type()))
+            #qWarning('painting '+str(self._painting))
 
             self._verschiebeGeo = False
             self._dreheGeo = False
@@ -480,7 +465,8 @@ class Tafelview(QGraphicsView):
 
     def changeSceneRect(self):
         r = self.sceneRect()
-        self.scene().setSceneRect(r)
+        r2 = self.viewport().rect()
+        self.scene().setSceneRect(r|r2)
 
     def enableGeodreieck(self, enable):
         if enable:
