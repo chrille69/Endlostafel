@@ -331,8 +331,9 @@ class Tafelview(QGraphicsView):
         for item in self.scene().items(ellipse.shape()):
             if hasattr(item,'removeElements') and callable(item.removeElements):
                 item.removeElements(ellipse)
-            if item.path().elementCount() < 2:
-                self.scene().removeItem(item)
+            if hasattr(item,'path') and callable(item.path):
+                if item.path().elementCount() < 2:
+                    self.scene().removeItem(item)
 
     def deleteItems(self):
         if not self.scene().selectedItems():
