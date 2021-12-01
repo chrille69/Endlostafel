@@ -41,8 +41,8 @@ def getNameCursor(name, height: float=32):
         'ellipsef' : [-1, -1],
         'kreisf'   : [-1, -1],
         'radierer' : [11.5, 32],
-        'erease-noborder' : [-1,-1],
-        'edit'     : [7, 7]
+        'ereaser'  : [-1,-1],
+        'edit'     : [3, 3]
     }
     
     if name in name2hotspot:
@@ -156,7 +156,7 @@ iconssvg = {
         <svg width="16" height="16" version="1.1" xmlns="http://www.w3.org/2000/svg">
             <path style="fill:{htmlcolor}" d="m7.9824 3a7 5 0 00-6.9824 5 7 5 0 007 5 7 5 0 007-5 7 5 0 00-7-5 7 5 0 00-.017578 0zm-1.6289 2.6465 1.6465 1.6465 1.6465-1.6465.70703.70703-1.6465 1.6465 1.6465 1.6465-.70703.70703-1.6465-1.6465-1.6465 1.6465-.70703-.70703 1.6465-1.6465-1.6465-1.6465.70703-.70703z"/>
         </svg>''',
-    'erease-noborder': '''
+    'ereaser': '''
         <svg width="13.652" height="13.679" version="1.1" xmlns="http://www.w3.org/2000/svg">
             <path style="fill:none;stroke-dasharray:2.60539, 1.3027;stroke-width:.65135;stroke:{htmlcolor}" d="m6.8132.32568c3.5973 0 6.5135 2.9162 6.5135 6.5135s-2.9162 6.5135-6.5135 6.5135c-3.5973 0-6.5135-2.9162-6.5135-6.5135s2.9162-6.5135 6.5135-6.5135z"/>
         </svg>''',
@@ -200,7 +200,7 @@ iconssvg = {
         </svg>''',
     'edit': '''
         <svg width="16" height="16" version="1.1" xmlns="http://www.w3.org/2000/svg">
-            <path style="fill:{htmlcolor}" d="m13.032 14.124-5.0134-5.0134-.88454 3.895-4.3349-10.708 10.708 4.3349-3.895.88454s2.6738 2.6738 5.0134 5.0134z"/>
+            <path style="fill:{htmlcolor}" d="m11.899 13.314-4.2426-4.2426-1.4142 2.8284-4.2426-9.8995 9.8995 4.2426-2.8284 1.4142 4.2426 4.2426z"/>
         </svg>''',
     'delete': '''
         <svg width="16" height="16" version="1.1" xmlns="http://www.w3.org/2000/svg">

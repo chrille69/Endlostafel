@@ -153,13 +153,12 @@ class Tafelview(QGraphicsView):
             Tafelview.statusKreisF   : getNameCursor(   'kreisf'),
             Tafelview.statusRechteckF: getNameCursor('rechteckf'),
             Tafelview.statusEllipseF : getNameCursor( 'ellipsef'),
-            Tafelview.statusRadiere  : getNameCursor( 'erease-noborder'),
             Tafelview.statusEdit     : getNameCursor(     'edit')
         }
 
     def setCustomCursor(self):
         if self._status == Tafelview.statusRadiere:
-            cursor = getNameCursor('erease-noborder', self._radierdurchmesser)
+            cursor = getNameCursor('ereaser', self._radierdurchmesser)
         else:
             cursor = self._status2cursor[self._status]
         self.setCursor(cursor)
@@ -167,6 +166,10 @@ class Tafelview(QGraphicsView):
     def setStatus(self, status):
         if status not in self.statusArray:
             raise ValueError(f'Unbekannter Status: {status}')
+
+        if self._status == Tafelview.statusEdit and status != Tafelview.statusEdit:
+            for item in self.scene().items():
+                item.setSelected(False)
 
         self._status = status
         self._painting = False
@@ -212,6 +215,8 @@ class Tafelview(QGraphicsView):
             item = Quadrat(self, pos, self._currentpen, self._currentbrush)
         elif self._status in [Tafelview.statusRechteck, Tafelview.statusRechteckF]:
             item = Rechteck(self, pos, self._currentpen, self._currentbrush)
+        elif self._status == Tafelview.statusRadiere:
+            item = None
         else:
             raise Exception(f'Für den Status "{self._status}" gibt es kein Item.')
 
@@ -240,7 +245,7 @@ class Tafelview(QGraphicsView):
 
             self._verschiebeGeo = self._geodreieck.posInVerschiebegriff(pos)
             self._dreheGeo = self._geodreieck.posInDrehgriff(pos)
-            if self._status in [Tafelview.statusEdit, Tafelview.statusRadiere]:
+            if self._status == Tafelview.statusEdit:
                 return super().viewportEvent(event)
             
             if not self._verschiebeGeo and not self._dreheGeo:
@@ -271,13 +276,7 @@ class Tafelview(QGraphicsView):
             if self._status == self.statusEdit:
                 return super().viewportEvent(event)
             if self._status == Tafelview.statusRadiere:
-                durchmesser = self._radierdurchmesser/self.transform().m11()
-                ellipse = QGraphicsEllipseItem(QRectF(pos-QPointF(durchmesser/2,durchmesser/2),QSizeF(durchmesser,durchmesser)))
-                for item in self.scene().items(ellipse.shape()):
-                    if hasattr(item,'removeElements') and callable(item.removeElements):
-                        item.removeElements(ellipse)
-                    if item.path().elementCount() < 2:
-                        self.scene().removeItem(item)
+                self.radiere(pos)
                 return True
 
             pos = self.snapToGeodreieck(pos)
@@ -303,6 +302,8 @@ class Tafelview(QGraphicsView):
                 if self._status == Tafelview.statusFreihand:
                     item = Punkt(self,pos,self._currentpen,self._currentbrush)
                     self.scene().addItem(item)
+                elif self._status == Tafelview.statusRadiere:
+                    self.radiere(pos)
 
             self._currentItem = None
             self._redoitems = []
@@ -324,6 +325,15 @@ class Tafelview(QGraphicsView):
             posGeo.setY(0)
         return self._geodreieck.mapToScene(posGeo)
     
+    def radiere(self, pos):
+        durchmesser = self._radierdurchmesser/self.transform().m11()
+        ellipse = QGraphicsEllipseItem(QRectF(pos-QPointF(durchmesser/2,durchmesser/2),QSizeF(durchmesser,durchmesser)))
+        for item in self.scene().items(ellipse.shape()):
+            if hasattr(item,'removeElements') and callable(item.removeElements):
+                item.removeElements(ellipse)
+            if item.path().elementCount() < 2:
+                self.scene().removeItem(item)
+
     def deleteItems(self):
         if not self.scene().selectedItems():
             QMessageBox.warning(self, 'Hinweis', 'Bitte wählen Sie Elemente aus.')
