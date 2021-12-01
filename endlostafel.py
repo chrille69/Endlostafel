@@ -428,10 +428,9 @@ class Editor(QMainWindow):
             self.newItemCreated.emit(item)
 
     def showHelp(self):
-        text = '''<h1>Physikertafel</h1>
+        text = '''<h1>Endlostafel</h1>
             <h3>Autor: Christian Hoffmann</h3>
-            <p>Dieses Programm stellt ein einfaches Schreibwerkzeug für den Frontalunterricht dar.
-            Es darf auch von Nicht-Physikern benutzt werden.</p>
+            <p>Dieses Programm stellt ein einfaches Schreibwerkzeug für den Frontalunterricht dar.</p>
             <h4>Kommandozeilenoptionen</h4>
             <p><code>--show [fullscreen,maximized,normal]</code></p>
             <p>Startet die Tafel in Vollbild, maximiertem Fenster oder Fenster in Normalgröße. Bei
@@ -439,7 +438,7 @@ class Editor(QMainWindow):
             in den Einstellungen angenommen. Ist der Wert in den Einstellungen nicht gesetzt, wird mit
             maximized gestartet.</p>
             <p>Berlin, November 2021</p>'''
-        QMessageBox.about(self, 'Über physikertafel',text)
+        QMessageBox.about(self, 'Über Endlostafel',text)
 
 
 class Action(QAction):
@@ -510,9 +509,9 @@ if __name__ == "__main__":
     app = QApplication()
     app.setStyle('Fusion')
     app.setWindowIcon(getIconSvg('oszli'))
-    app.setApplicationDisplayName('Physikertafel')
+    app.setApplicationDisplayName('Endlostafel')
 
-    settings = QSettings('hoffmann', 'physikertafel')
+    settings = QSettings('hoffmann', 'endlostafel')
     if options['show']:
         showmode = options['show']
     else:
@@ -520,6 +519,7 @@ if __name__ == "__main__":
 
     d = Editor(settings)
     if showmode == 'normal':
+        d.setFixedSize(800,600)
         d.showNormal()
     elif showmode == 'fullscreen':
         d.showFullScreen()
