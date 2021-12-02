@@ -1,6 +1,6 @@
 
 from PySide6 import QtCore
-from PySide6.QtCore import QEvent, QPointF, QRect, QRectF, QSizeF, Qt, Signal, qWarning
+from PySide6.QtCore import QEvent, QPointF, QRect, QRectF, QSizeF, Qt, Signal, qDebug, qWarning
 from PySide6.QtGui import QBrush, QColor, QPainter, QPalette, QPen, QResizeEvent, QTransform
 from PySide6.QtWidgets import QApplication, QGraphicsEllipseItem, QGraphicsScene, QGraphicsView, QMessageBox, QToolButton, QWidget
 
@@ -40,6 +40,7 @@ class Tafelview(QGraphicsView):
 
     def __init__(self, parent: QWidget, qcolor: QColor=QColor(Qt.black), pensize: float=3, status: str=statusFreihand):
         super().__init__(parent)
+        self.setDragMode(QGraphicsView.RubberBandDrag)
         self._painting = False
         tafel = QGraphicsScene(self)
         self.setScene(tafel)
@@ -175,12 +176,6 @@ class Tafelview(QGraphicsView):
         self._painting = False
         self._dreheGeo = False
         self._verschiebeGeo = False
-
-       # Edit-Modus der Items setzen
-        if status == self.statusEdit:
-            self.setDragMode(QGraphicsView.RubberBandDrag)
-        else:
-            self.setDragMode(QGraphicsView.NoDrag)
         
         # Stift und Pinsel dem Status anpassen
         if status in [self.statusFreihand, self.statusLinie, self.statusKreis, self.statusQuadrat, self.statusEllipse, self.statusRechteck]:
@@ -237,11 +232,10 @@ class Tafelview(QGraphicsView):
     def viewportEvent(self, event: QtCore.QEvent) -> bool:
 
         if event.type() == QEvent.MouseButtonPress:
-            #qWarning('Event '+str(event.type()))
-            #qWarning('painting '+str(self._painting))
-
-            self._painting = True
+            qDebug('Event '+str(event.type()))
             pos = self.scenePosFromEvent(event)
+            qDebug('pos '+str(pos))
+
 
             self._verschiebeGeo = self._geodreieck.posInVerschiebegriff(pos)
             self._dreheGeo = self._geodreieck.posInDrehgriff(pos)
@@ -252,13 +246,14 @@ class Tafelview(QGraphicsView):
                 pos = self.snapToGeodreieck(pos)
                 self.setLastPos(pos)
                 self.createCurrentItem(pos)
+                self._painting = True
             return True
 
         elif event.type() == QEvent.MouseMove:
-            #qWarning('Event '+str(event.type()))
-            #qWarning('painting '+str(self._painting))
-
+            qDebug('Event '+str(event.type()))
             pos = self.scenePosFromEvent(event)
+            qDebug('pos '+str(pos))
+            qDebug(str(self.hasFocus()))
 
             if event.buttons() == Qt.NoButton:
                 return super().viewportEvent(event)
@@ -287,16 +282,18 @@ class Tafelview(QGraphicsView):
             return True
                 
         elif event.type() == QEvent.MouseButtonRelease:
-            #qWarning('Event '+str(event.type()))
-            #qWarning('painting '+str(self._painting))
+            qDebug('Event '+str(event.type()))
+            pos = self.scenePosFromEvent(event)
+            qDebug('pos '+str(pos))
 
             self._verschiebeGeo = False
             self._dreheGeo = False
+            self._currentItem = None
 
             if self._status == self.statusEdit:
+                self._painting = False
                 return super().viewportEvent(event)
 
-            pos = self.scenePosFromEvent(event)
             pos = self.snapToGeodreieck(pos)
             if pos == self._lastPos or not self._painting:   # MouseClick
                 if self._status == Tafelview.statusFreihand:
@@ -305,7 +302,6 @@ class Tafelview(QGraphicsView):
                 elif self._status == Tafelview.statusRadiere:
                     self.radiere(pos)
 
-            self._currentItem = None
             self._redoitems = []
             self._painting = False
             self.mousereleased.emit()
