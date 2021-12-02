@@ -501,7 +501,7 @@ class Uhr(QLCDNumber):
 
 if __name__ == "__main__":
     from argparse import ArgumentParser
-    parser = ArgumentParser(description='Digitale Tafel für Physiklehrer und andere. Einfach nur schreiben.')
+    parser = ArgumentParser(description='Endlostafel für das digitale Klassenzimmer. Einfach nur schreiben.')
     parser.add_argument('--show',help='Wie soll die Tafel geöffnet werden (default: maximized)?')
     options=vars(parser.parse_args())
 

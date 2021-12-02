@@ -220,23 +220,14 @@ class Tafelview(QGraphicsView):
         self._currentItem = item
 
     def scenePosFromEvent(self, event):
-        if event.type() in [QEvent.TouchBegin,QEvent.TouchUpdate,QEvent.TouchEnd]:
-            tp = event.points().pop()
-            pos = self.mapToScene(tp.pos().x(), tp.pos().y())
-        elif event.type() in [QEvent.MouseButtonPress,QEvent.MouseMove,QEvent.MouseButtonRelease]:
-            pos = self.mapToScene(event.pos())
-        else:
-            raise Exception('Keine Position für Event gefunden!')
+        tp = event.points().pop()
+        pos = self.mapToScene(tp.pos().x(), tp.pos().y())
         return pos
 
     def viewportEvent(self, event: QtCore.QEvent) -> bool:
 
-        if event.type() == QEvent.MouseButtonPress:
-            qDebug('Event '+str(event.type()))
+        if event.type() in [QEvent.MouseButtonPress, QEvent.MouseButtonDblClick]:
             pos = self.scenePosFromEvent(event)
-            qDebug('pos '+str(pos))
-
-
             self._verschiebeGeo = self._geodreieck.posInVerschiebegriff(pos)
             self._dreheGeo = self._geodreieck.posInDrehgriff(pos)
             if self._status == Tafelview.statusEdit:
@@ -250,13 +241,7 @@ class Tafelview(QGraphicsView):
             return True
 
         elif event.type() == QEvent.MouseMove:
-            qDebug('Event '+str(event.type()))
             pos = self.scenePosFromEvent(event)
-            qDebug('pos '+str(pos))
-            qDebug(str(self.hasFocus()))
-
-            if event.buttons() == Qt.NoButton:
-                return super().viewportEvent(event)
 
             if not self._painting:
                 self._verschiebeGeo = self._geodreieck.posInVerschiebegriff(pos)
@@ -264,13 +249,17 @@ class Tafelview(QGraphicsView):
 
             if self._dreheGeo:
                 self._geodreieck.drehe(pos)
+                self._painting = True
                 return True
             if self._verschiebeGeo:
                 self._geodreieck.verschiebe(pos)
+                self._painting = True
                 return True
             if self._status == self.statusEdit:
+                self._painting = True
                 return super().viewportEvent(event)
             if self._status == Tafelview.statusRadiere:
+                self._painting = True
                 self.radiere(pos)
                 return True
 
@@ -282,17 +271,11 @@ class Tafelview(QGraphicsView):
             return True
                 
         elif event.type() == QEvent.MouseButtonRelease:
-            qDebug('Event '+str(event.type()))
             pos = self.scenePosFromEvent(event)
-            qDebug('pos '+str(pos))
 
             self._verschiebeGeo = False
             self._dreheGeo = False
             self._currentItem = None
-
-            if self._status == self.statusEdit:
-                self._painting = False
-                return super().viewportEvent(event)
 
             pos = self.snapToGeodreieck(pos)
             if pos == self._lastPos or not self._painting:   # MouseClick
@@ -306,6 +289,9 @@ class Tafelview(QGraphicsView):
             self._painting = False
             self.mousereleased.emit()
             self.eswurdegemalt.emit()
+
+            if self._status == self.statusEdit:
+                return super().viewportEvent(event)
 
             return True
         
