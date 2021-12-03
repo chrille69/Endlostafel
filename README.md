@@ -1,7 +1,7 @@
 # Endlostafel für das digitale Klassenzimmer
-Eine einfache Schreibfläche für digitale Tafeln.
+Eine einfache Schreibfläche für digitale Tafeln mit nützlichen Extras für den Unterricht.
 
-Eine Open-Source Softwarelösung für digitale Tafeln mit nützlichen Extras. Sie unterliegt der GPL.
+Diese Open-Source Softwarelösung unterliegt der GPL.
 
 ## Hintergrund
 Eine digitale Tafel besteht aus zwei Hardware-Komponenten:
@@ -32,6 +32,7 @@ Folgende Funktionen stehen zur Verfügung:
 * Verschieben und Löschen einzelner Elemente
 * Speichern der Inhalte als SVG-Dateien
 * Laden von SVGs und Bitmaps
+* Einfügen der Zwischenablage als Grafik
 * Speichern einiger weniger Voreinstellungen
 * Zoomen einzelner Elemente oder der gesamten Zeichenfläche
 
@@ -42,7 +43,7 @@ die Bibliotheken *pyside6*, *psutil* und zum Erzeugen einer statischen, ausführ
 Datei *pyinstaller*, die mit Hilfe von *pip* installiert werden können.
 
 ### Pyside6
-Pyside6 ist eine von Qt zur Verfügung gestellte Python-Anbindung an die Bibliotheken von Qt (https://www.qt.io/)
+Pyside6 ist eine von Qt zur Verfügung gestellte Python-Anbindung an die Bibliotheken von Qt (https://www.qt.io/).
 SVG Grafiken werden über QT verarbeitet und sind daher im Rahmen von XSVG  implementiert (https://doc.qt.io/qt-5/qtsvg-attribution-xsvg.html).
 
 ### Psutil
@@ -53,3 +54,9 @@ Unter Windows muss zusätzlich Visual Studio installiert werden. Weitere Informa
 Um unter Windows eine ausführbare Datei zu erzeugen, verwendet man den Befehl:
 
     pyinstaller.exe -F -i oszli-icon.ico -w endlostafel.py
+
+## Bekannte Bugs
+Beim Umschalten in den Edit-Modus funktioniert das Rubberband erst beim zweiten Versuch.
+
+## Über den Autor
+Ich bin Physik- und Mathematiklehrer an der Lise-Meitner-Schule in Berlin.
