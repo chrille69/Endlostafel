@@ -535,7 +535,7 @@ if __name__ == "__main__":
 
     d = Editor(settings)
     if showmode == 'normal':
-        d.setFixedSize(800,600)
+        d.resize(800,600)
         d.showNormal()
     elif showmode == 'fullscreen':
         d.showFullScreen()

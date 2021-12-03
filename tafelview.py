@@ -364,26 +364,37 @@ class Tafelview(QGraphicsView):
             self.statusbarinfo.emit('Die Elemente sind kopiert. Bitte jetzt verschieben...',5000)
 
     def erweitern(self, richtung):
-        _, _, wv, hv = self.viewport().rect().getRect()
-        xs, ys, ws, hs = self.sceneRect().getRect()
-        dh = hv*0.4
-        dw = wv*0.4
+        scenerect = self.sceneRect()
+        viewrect = self.mapToScene(self.viewport().geometry()).boundingRect()
+        center = viewrect.center()
         if richtung == 'bottom':
-            self.setSceneRect(xs, ys, ws, hs+dh)
-            self.scene().setSceneRect(xs, ys, ws, hs+dh)
-            self.verticalScrollBar().setValue(hs+dh)
+            halb = viewrect.height()/2
+            punkt = center + QPointF(0, halb)
+            if not scenerect.contains(punkt + QPointF(0, halb)):
+                scenerect.setBottom(punkt.y() + halb)
+                self.setSceneRect(scenerect)
+            self.centerOn(punkt)
         elif richtung == 'top':
-            self.setSceneRect(xs, ys-dh, ws, hs+dh)
-            self.scene().setSceneRect(xs, ys-dh, ws, hs+dh)
-            self.verticalScrollBar().setValue(ys-dh)
+            halb = viewrect.height()/2
+            punkt = center - QPointF(0, halb)
+            if not scenerect.contains(punkt - QPointF(0, halb)):
+                scenerect.setTop(punkt.y() - halb)
+                self.setSceneRect(scenerect)
+            self.centerOn(punkt)
         elif richtung == 'left':
-            self.setSceneRect(xs-dw, ys, ws+dw, hs)
-            self.scene().setSceneRect(xs-dw, ys, ws+dw, hs)
-            self.horizontalScrollBar().setValue(xs-dw)
-        elif richtung == 'right':
-            self.setSceneRect(xs, ys, ws+dw, hs)
-            self.scene().setSceneRect(xs, ys, ws+dw, hs)
-            self.horizontalScrollBar().setValue(ws+dw)
+            halb = viewrect.width()/2
+            punkt = center - QPointF(halb,0)
+            if not scenerect.contains(punkt - QPointF(halb,0)):
+                scenerect.setLeft(punkt.x() - halb)
+                self.setSceneRect(scenerect)
+            self.centerOn(punkt)
+        elif richtung == 'left':
+            halb = viewrect.width()/2
+            punkt = center + QPointF(halb,0)
+            if not scenerect.contains(punkt + QPointF(halb,0)):
+                scenerect.setLeft(punkt.x() + halb)
+                self.setSceneRect(scenerect)
+            self.centerOn(punkt)
 
     def importItem(self, item):
         self.scene().addItem(item)
