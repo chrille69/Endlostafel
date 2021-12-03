@@ -271,7 +271,7 @@ class Editor(QMainWindow):
         actFreihand.trigger()
 
         # Trigger die Standard-Farbe und Standard Pensize
-        colorstr = self._settings.value('editor/colorstr', 'Rot')
+        colorstr = self._settings.value('editor/colorstr', 'Normal')
         coloraction = [act for act in self._coloractions if act.text() == colorstr]
         if coloraction:
             coloraction.pop().trigger()
