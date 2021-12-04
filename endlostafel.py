@@ -459,6 +459,12 @@ class Editor(QMainWindow):
             einem ungültigen Wert, wird maximized angenommen. Ist diese Option nicht gegeben, wird der Wert
             in den Einstellungen angenommen. Ist der Wert in den Einstellungen nicht gesetzt, wird mit
             maximized gestartet.</p>
+            <h4>Bekannte Bugs</h4>
+            <ul>
+                <li>Undo funktioniert nicht beim Löschen und Radieren von Objekten.</li>
+                <li>Beim Editieren von Objekten funktioniert das Rubberband erst beim zweiten
+                    Anlauf (nur Touchscreens).</li>
+            </ul>
             <p>Berlin, November 2021</p>'''
         QMessageBox.about(self, 'Über Endlostafel',text)
 

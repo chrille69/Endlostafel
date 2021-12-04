@@ -16,7 +16,7 @@
 # along with this program.  If not, see https://www.gnu.org/licenses/.
 
 from math import atan2, sqrt, log10
-from PySide6.QtCore import QPointF, Qt
+from PySide6.QtCore import QPointF, QRectF, QSizeF, Qt
 from PySide6.QtGui import QBrush, QColor, QPainterPath, QPalette, QPen, QPixmap
 from PySide6.QtSvgWidgets import QGraphicsSvgItem
 from PySide6.QtWidgets import QApplication, QGraphicsEllipseItem, QGraphicsItem, QGraphicsLineItem, QGraphicsPathItem, QGraphicsPixmapItem, QGraphicsRectItem, QGraphicsView
@@ -77,23 +77,34 @@ class Pfad(QGraphicsPathItem):
 
     def removeElements(self, ellipse: QGraphicsEllipseItem):
         neupfad = QPainterPath()
+        if self.brush() != Qt.NoBrush:
+            # Gefüllte Elemente werden gelöscht.
+            self.setPath(neupfad)
+            return
         anzahl = self.path().elementCount()
         if anzahl > 1:
-            geschnitten = True
+            geschnitten = False
             for i in range(anzahl):
                 element = self.path().elementAt(i)
                 pos = QPointF(element.x, element.y)
-                if not ellipse.shape().contains(self.mapToScene(pos)):
+                if ellipse.shape().contains(self.mapToScene(pos)) and element.type != QPainterPath.CurveToDataElement:
+                    # Dieser Punkt wird nicht gezeichnet
+                    geschnitten = True
+                else:
                     if geschnitten:
-                        geschnitten=False
                         neupfad.moveTo(pos)
                     else:
                         if element.isLineTo():
                             neupfad.lineTo(pos)
+                        if element.isCurveTo():
+                            de1 = self.path().elementAt(i+1)
+                            cp1 = QPointF(de1.x,de1.y)
+                            de2 = self.path().elementAt(i+2)
+                            cp2 = QPointF(de2.x,de2.y)
+                            neupfad.cubicTo(pos,cp1,cp2)
                         else:
                             neupfad.moveTo(pos)
-                else:
-                    geschnitten=True
+                    geschnitten=False
         self.setPath(neupfad)
         self.setTransformOriginPoint(self.boundingRect().center())
 
@@ -164,6 +175,7 @@ class Pfeil(Pfad):
         self.setPath(path)
         super().change()
 
+
 class PfeilSnap(Pfad):
     def __init__(self, view: QGraphicsView, pos: QPointF, pen: QPen, brush: QBrush):
         super().__init__(view, pos, pen, brush)
@@ -198,7 +210,10 @@ class Kreis(Pfad):
         rx = abs(pos.x()-self._firstpos.x())
         ry = abs(pos.y()-self._firstpos.y())
         r = sqrt(rx*rx+ry*ry)
-        path.addEllipse(self._firstpos, r, r)
+        rect = QRectF(self._firstpos-QPointF(r,r), QSizeF(2*r,2*r))
+        path.moveTo(self._firstpos+QPointF(r,0))
+        for winkel in range(0,360,15):
+            path.arcTo(rect, winkel, 15)
         self.setPath(path)
         super().change()
 
@@ -211,7 +226,10 @@ class Ellipse(Pfad):
         path = QPainterPath(self._firstpos)
         rx = abs(pos.x()-self._firstpos.x())
         ry = abs(pos.y()-self._firstpos.y())
-        path.addEllipse(self._firstpos, rx, ry)
+        rect = QRectF(self._firstpos-QPointF(rx,ry), QSizeF(2*rx,2*ry))
+        path.moveTo(self._firstpos+QPointF(rx,0))
+        for winkel in range(0,360,15):
+            path.arcTo(rect, winkel, 15)
         self.setPath(path)
         super().change()
 
