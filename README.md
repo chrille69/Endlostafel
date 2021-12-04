@@ -56,7 +56,8 @@ Um unter Windows eine ausführbare Datei zu erzeugen, verwendet man den Befehl:
     pyinstaller.exe -F -i oszli-icon.ico -w endlostafel.py
 
 ## Bekannte Bugs
-Beim Umschalten in den Edit-Modus funktioniert das Rubberband erst beim zweiten Versuch.
+* Die Undo-Funktion funktioniert nicht beim Radieren oder Löschen von Objekten.
+* Beim Umschalten in den Edit-Modus funktioniert das Rubberband erst beim zweiten Versuch (nur bei Touchscreens).
 
 ## Über den Autor
 Ich bin Physik- und Mathematiklehrer an der Lise-Meitner-Schule in Berlin.
