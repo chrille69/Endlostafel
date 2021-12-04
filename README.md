@@ -39,8 +39,8 @@ Folgende Funktionen stehen zur Verfügung:
 ## Technische Details
 
 Das Programm ist in Python 3 geschrieben (https://www.python.org/) und benötigt
-die Bibliotheken *pyside6*, *psutil* und zum Erzeugen einer statischen, ausführbaren
-Datei *pyinstaller*, die mit Hilfe von *pip* installiert werden können.
+die Bibliotheken **pyside6**, **psutil** und zum Erzeugen einer statischen, ausführbaren
+Datei **pyinstaller**, die mit Hilfe von **pip** installiert werden können.
 
 ### Pyside6
 Pyside6 ist eine von Qt zur Verfügung gestellte Python-Anbindung an die Bibliotheken von Qt (https://www.qt.io/).
