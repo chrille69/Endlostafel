@@ -21,7 +21,7 @@ from PySide6.QtGui import QBrush, QColor, QPainter, QPalette, QPen, QResizeEvent
 from PySide6.QtWidgets import QApplication, QGraphicsEllipseItem, QGraphicsScene, QGraphicsView, QMessageBox, QToolButton, QWidget
 
 from icons import getNameCursor, getIconSvg
-from items import Ellipse, Kreis, Line, Pfad, Pfeil, Punkt, Quadrat, Rechteck, Stift
+from items import Ellipse, Kreis, Line, LineSnap, Pfad, Pfeil, PfeilSnap, Punkt, Quadrat, Rechteck, Stift
 from geodreieck import Geodreieck
 
 
@@ -35,7 +35,9 @@ class Tafelview(QGraphicsView):
 
     statusFreihand  = 'freihand'
     statusLinie     = 'linie'
+    statusLinieS    = 'linies'
     statusPfeil     = 'pfeil'
+    statusPfeilS    = 'pfeils'
     statusKreis     = 'kreis'
     statusQuadrat   = 'quadrat'
     statusEllipse   = 'ellipse'
@@ -48,7 +50,7 @@ class Tafelview(QGraphicsView):
     statusEdit      = 'edit'
 
     statusArray = [
-        statusFreihand, statusLinie, statusPfeil,
+        statusFreihand, statusLinie, statusPfeil, statusLinieS, statusPfeilS,
         statusKreis, statusQuadrat, statusEllipse, statusRechteck,
         statusKreisF, statusQuadratF, statusEllipseF, statusRechteckF,
         statusEdit, statusRadiere
@@ -162,6 +164,8 @@ class Tafelview(QGraphicsView):
             Tafelview.statusFreihand : getNameCursor(    'stift'),
             Tafelview.statusLinie    : getNameCursor(    'linie'),
             Tafelview.statusPfeil    : getNameCursor(    'pfeil'),
+            Tafelview.statusLinieS   : getNameCursor(    'linie'),
+            Tafelview.statusPfeilS   : getNameCursor(    'pfeil'),
             Tafelview.statusQuadrat  : getNameCursor(  'quadrat'),
             Tafelview.statusKreis    : getNameCursor(    'kreis'),
             Tafelview.statusRechteck : getNameCursor( 'rechteck'),
@@ -194,13 +198,13 @@ class Tafelview(QGraphicsView):
         self._verschiebeGeo = False
         
         # Stift und Pinsel dem Status anpassen
-        if status in [self.statusFreihand, self.statusLinie, self.statusKreis, self.statusQuadrat, self.statusEllipse, self.statusRechteck]:
+        if status in [self.statusFreihand, self.statusLinie, self.statusLinieS, self.statusKreis, self.statusQuadrat, self.statusEllipse, self.statusRechteck]:
             self._currentpen = self._drawpen
             self._currentbrush = Qt.NoBrush
         elif status in [self.statusKreisF, self.statusQuadratF, self.statusEllipseF, self.statusRechteckF]:
             self._currentpen = Qt.NoPen
             self._currentbrush = self._arrowbrush
-        elif status == self.statusPfeil:
+        elif status in [self.statusPfeil, self.statusPfeilS]:
             self._currentpen = self._arrowpen
             self._currentbrush = self._arrowbrush
         else:
@@ -218,6 +222,10 @@ class Tafelview(QGraphicsView):
             item = Line(self, pos, self._currentpen, self._currentbrush)
         elif self._status == Tafelview.statusPfeil:
             item = Pfeil(self, pos, self._currentpen, self._currentbrush)
+        elif self._status == Tafelview.statusLinieS:
+            item = LineSnap(self, pos, self._currentpen, self._currentbrush)
+        elif self._status == Tafelview.statusPfeilS:
+            item = PfeilSnap(self, pos, self._currentpen, self._currentbrush)
         elif self._status in [Tafelview.statusKreis, Tafelview.statusKreisF]:
             item = Kreis(self, pos, self._currentpen, self._currentbrush)
         elif self._status in [Tafelview.statusEllipse, Tafelview.statusEllipseF]:

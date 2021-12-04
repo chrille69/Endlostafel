@@ -115,23 +115,27 @@ class Editor(QMainWindow):
         self._pensizegroup = QActionGroup(self)
         self.configureActionDict(self._pensizeactions, self._pensizegroup, self.pensizeChanged.emit)
 
-        actFreihand  = Action(    'stift',           'Freihand', self)
-        actLinie     = Action(    'linie',       'Gerade Linie', self)
-        actPfeil     = Action(    'pfeil',              'Pfeil', self)
-        actKreis     = Action(    'kreis',              'Kreis', self)
-        actQuadrat   = Action(  'quadrat',            'Quadrat', self)
-        actEllipse   = Action(  'ellipse',            'Ellipse', self)
-        actRechteck  = Action( 'rechteck',           'Rechteck', self)
-        actKreisF    = Action(   'kreisf',    'gefüllter Kreis', self)
-        actQuadratF  = Action( 'quadratf',  'gefülltes Quadrat', self)
-        actEllipseF  = Action( 'ellipsef',   'gefüllte Ellipse', self)
-        actRechteckF = Action('rechteckf', 'gefülltes Rechteck', self)
-        actRubber    = Action( 'radierer',           'Radieren', self)
-        actEdit      = Action(     'edit',  'Objekte editieren', self)
+        actFreihand  = Action(    'stift',              'Freihand', self)
+        actLinie     = Action(    'linie',          'Gerade Linie', self)
+        actPfeil     = Action(    'pfeil',                 'Pfeil', self)
+        actLinieS    = Action(   'linies','Gerade Linie (hor/ver)', self)
+        actPfeilS    = Action(   'pfeils',       'Pfeil (hor/ver)', self)
+        actKreis     = Action(    'kreis',                 'Kreis', self)
+        actQuadrat   = Action(  'quadrat',               'Quadrat', self)
+        actEllipse   = Action(  'ellipse',               'Ellipse', self)
+        actRechteck  = Action( 'rechteck',              'Rechteck', self)
+        actKreisF    = Action(   'kreisf',       'gefüllter Kreis', self)
+        actQuadratF  = Action( 'quadratf',     'gefülltes Quadrat', self)
+        actEllipseF  = Action( 'ellipsef',      'gefüllte Ellipse', self)
+        actRechteckF = Action('rechteckf',    'gefülltes Rechteck', self)
+        actRubber    = Action( 'radierer',              'Radieren', self)
+        actEdit      = Action(     'edit',     'Objekte editieren', self)
         self._statusactions = {
             actFreihand:  Tafelview.statusFreihand,
             actLinie:     Tafelview.statusLinie,
             actPfeil:     Tafelview.statusPfeil,
+            actLinieS:    Tafelview.statusLinieS,
+            actPfeilS:    Tafelview.statusPfeilS,
             actKreis:     Tafelview.statusKreis,
             actQuadrat:   Tafelview.statusQuadrat,
             actEllipse:   Tafelview.statusEllipse,
@@ -185,6 +189,8 @@ class Editor(QMainWindow):
         right_spacer = QWidget()
         right_spacer.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
 
+        linesTool = ActionWidget(self, actLinie, actLinieS)
+        pfeileTool = ActionWidget(self, actPfeil, actPfeilS)
         formsTool = ActionWidget(self, actKreis, actQuadrat, actEllipse, actRechteck, actKreisF, actQuadratF, actEllipseF, actRechteckF)
 
         toolframe.addAction(exitAction)
@@ -211,8 +217,8 @@ class Editor(QMainWindow):
         toolframe.addSeparator()
 
         toolframe.addAction(actFreihand)
-        toolframe.addAction(actLinie)
-        toolframe.addAction(actPfeil)
+        toolframe.addAction(linesTool)
+        toolframe.addAction(pfeileTool)
         toolframe.addAction(formsTool)
         toolframe.addAction(actRubber)
         toolframe.addAction(actEdit)

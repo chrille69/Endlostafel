@@ -15,7 +15,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see https://www.gnu.org/licenses/.
 
-from math import sqrt, log10
+from math import atan2, sqrt, log10
 from PySide6.QtCore import QPointF, Qt
 from PySide6.QtGui import QBrush, QColor, QPainterPath, QPalette, QPen, QPixmap
 from PySide6.QtSvgWidgets import QGraphicsSvgItem
@@ -83,12 +83,6 @@ class Pfad(QGraphicsPathItem):
             for i in range(anzahl):
                 element = self.path().elementAt(i)
                 pos = QPointF(element.x, element.y)
-                #linienschnitt = False
-                #if i > 0:
-                #    vorelement = self.path().elementAt(i-1)
-                #    vorpos = QPointF(vorelement.x, vorelement.y)
-                #    linienschnitt = self.schnittLinieKreis(self.mapToScene(vorpos), self.mapToScene(pos), ellipse.rect().center(), ellipse.rect().height()/2)
-                #if not (ellipse.shape().contains(self.mapToScene(pos)) or linienschnitt):
                 if not ellipse.shape().contains(self.mapToScene(pos)):
                     if geschnitten:
                         geschnitten=False
@@ -135,6 +129,23 @@ class Line(Pfad):
         super().change()
 
 
+class LineSnap(Pfad):
+    def __init__(self, view: QGraphicsView, pos: QPointF, pen: QPen, brush: QBrush):
+        super().__init__(view, pos, pen, brush)
+
+    def change(self, pos):
+        delta = pos - self._firstpos
+        winkel = atan2(delta.y(),delta.x())*180/3.14
+        newpos = QPointF(self._firstpos.x(), pos.y())
+        if abs(winkel) <= 45 or winkel >= 135 or winkel <= -135:
+            newpos.setX(pos.x())
+            newpos.setY(self._firstpos.y())
+        path = QPainterPath(self._firstpos)
+        path.lineTo(newpos)
+        self.setPath(path)
+        super().change()
+
+
 class Pfeil(Pfad):
     def __init__(self, view: QGraphicsView, pos: QPointF, pen: QPen, brush: QBrush):
         super().__init__(view, pos, pen, brush)
@@ -149,6 +160,30 @@ class Pfeil(Pfad):
         path.moveTo(pos)
         path.lineTo(pos-5*lw*ds0+lw*dl0)
         path.lineTo(pos-5*lw*ds0-lw*dl0)
+        path.closeSubpath()
+        self.setPath(path)
+        super().change()
+
+class PfeilSnap(Pfad):
+    def __init__(self, view: QGraphicsView, pos: QPointF, pen: QPen, brush: QBrush):
+        super().__init__(view, pos, pen, brush)
+
+    def change(self, pos):
+        delta = pos - self._firstpos
+        winkel = atan2(delta.y(),delta.x())*180/3.14
+        newpos = QPointF(self._firstpos.x(), pos.y())
+        if abs(winkel) <= 45 or winkel >= 135 or winkel <= -135:
+            newpos.setX(pos.x())
+            newpos.setY(self._firstpos.y())
+        path = QPainterPath(self._firstpos)
+        path.lineTo(newpos)
+        ds = newpos - self._firstpos
+        ds0 = ds/sqrt(ds.x()*ds.x()+ds.y()*ds.y())
+        dl0 = QPointF(ds0.y(), -ds0.x())
+        lw = self.pen().widthF()
+        path.moveTo(newpos)
+        path.lineTo(newpos-5*lw*ds0+lw*dl0)
+        path.lineTo(newpos-5*lw*ds0-lw*dl0)
         path.closeSubpath()
         self.setPath(path)
         super().change()
