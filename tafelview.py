@@ -265,6 +265,9 @@ class Tafelview(QGraphicsView):
             return True
 
         elif event.type() == QEvent.MouseMove:
+            if event.buttons() == Qt.NoButton:
+                return super().viewportEvent(event)
+            
             pos = self.scenePosFromEvent(event)
 
             if not self._painting:
@@ -410,8 +413,8 @@ class Tafelview(QGraphicsView):
 
         self.berechneSceneRectNeu(item)
 
-        self.statusbarinfo.emit('Das Element wurde in der Mitte eingefügt. Bitte jetzt verschieben...',5000)
-        self.eswurdegemalt.emit()
+        self.statusbarinfo.emit('Das Element oben links eingefügt. Bitte jetzt verschieben...',5000)
+        self.eswurdegemalt.emit() 
 
     def berechneSceneRectNeu(self, item):
         # Mögliche Erweiterung des sceneRect berechnen
