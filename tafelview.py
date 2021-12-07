@@ -399,11 +399,11 @@ class Tafelview(QGraphicsView):
                 scenerect.setLeft(punkt.x() - halb)
                 self.setSceneRect(scenerect)
             self.centerOn(punkt)
-        elif richtung == 'left':
+        elif richtung == 'right':
             halb = viewrect.width()/2
             punkt = center + QPointF(halb,0)
             if not scenerect.contains(punkt + QPointF(halb,0)):
-                scenerect.setLeft(punkt.x() + halb)
+                scenerect.setRight(punkt.x() + halb)
                 self.setSceneRect(scenerect)
             self.centerOn(punkt)
 
