@@ -18,7 +18,7 @@
 from PySide6 import QtCore
 from PySide6.QtCore import QEvent, QPointF, QRect, QRectF, QSizeF, Qt, Signal, qDebug, qWarning
 from PySide6.QtGui import QBrush, QColor, QPainter, QPalette, QPen, QResizeEvent, QTransform
-from PySide6.QtWidgets import QApplication, QGraphicsEllipseItem, QGraphicsScene, QGraphicsView, QMessageBox, QToolButton, QWidget
+from PySide6.QtWidgets import QApplication, QGraphicsEllipseItem, QGraphicsItem, QGraphicsScene, QGraphicsView, QMessageBox, QToolButton, QWidget
 
 from icons import getNameCursor, getIconSvg
 from items import Ellipse, Kreis, Line, LineSnap, Pfad, Pfeil, PfeilSnap, Punkt, Quadrat, Rechteck, Stift
@@ -374,6 +374,20 @@ class Tafelview(QGraphicsView):
         if not funktioniert_nicht:
             self.statusbarinfo.emit('Die Elemente sind kopiert. Bitte jetzt verschieben...',5000)
 
+    def importItem(self, item):
+        self.scene().addItem(item)
+        item.setPos(self.mapToScene(0,0))
+        self.berechneSceneRectNeu(item)
+
+        self.statusbarinfo.emit('Das Element oben links eingefügt. Bitte jetzt verschieben...',5000)
+        self.eswurdegemalt.emit() 
+
+    def berechneSceneRectNeu(self, item: QGraphicsItem):
+        # Mögliche Erweiterung des sceneRect berechnen
+        rect = item.sceneBoundingRect()
+        rect |= self.sceneRect()
+        self.setSceneRect(rect)
+
     def erweitern(self, richtung):
         scenerect = self.sceneRect()
         viewrect = self.mapToScene(self.viewport().geometry()).boundingRect()
@@ -406,22 +420,6 @@ class Tafelview(QGraphicsView):
                 scenerect.setRight(punkt.x() + halb)
                 self.setSceneRect(scenerect)
             self.centerOn(punkt)
-
-    def importItem(self, item):
-        self.scene().addItem(item)
-        item.setPos(self.mapToScene(self.viewport().rect().topLeft()))
-
-        self.berechneSceneRectNeu(item)
-
-        self.statusbarinfo.emit('Das Element oben links eingefügt. Bitte jetzt verschieben...',5000)
-        self.eswurdegemalt.emit() 
-
-    def berechneSceneRectNeu(self, item):
-        # Mögliche Erweiterung des sceneRect berechnen
-        rect = item.mapToScene(item.boundingRect()).boundingRect()
-        rect |= self.sceneRect()
-        self.setSceneRect(rect)
-        self.scene().setSceneRect(rect)
 
     def undo(self):
         items = self.scene().items()
