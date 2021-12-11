@@ -410,7 +410,9 @@ class Editor(QMainWindow):
         w, h = rect.size().toTuple()
         generator = QSvgGenerator()
         generator.setFileName(filename)
-        generator.setSize(QSize(int(w), int(h)))
+        # auskommentiert. Hier sind nur Integers erlaubt, was sich in
+        # einer leichten Skalierung bemerkbar machen würde.
+        # generator.setSize(QSize(int(w), int(h)))
         generator.setViewBox(rect)
         generator.setTitle('Tafelbild')
         generator.setDescription('Tafelbild')
