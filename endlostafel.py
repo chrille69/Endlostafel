@@ -406,8 +406,7 @@ class Editor(QMainWindow):
             return
 
         backgroundcolor = self.palette().color(QPalette.Base)
-        tafel = self._tafelview.scene()
-        rect = self._tafelview.scene().sceneRect()
+        rect = self._tafelview.sceneRect()
         w, h = rect.size().toTuple()
         generator = QSvgGenerator()
         generator.setFileName(filename)
@@ -420,7 +419,7 @@ class Editor(QMainWindow):
         painter.begin(generator)
         if backgroundcolor != QColor(Qt.white):
             painter.fillRect(rect,backgroundcolor)
-        tafel.render(painter,rect)
+        self._tafelview.scene().render(painter,rect,rect)
         painter.end()
         self._ungespeichert = False
 
