@@ -37,7 +37,7 @@ from paletten import dark as paletteDark, light as paletteLight
 # pyinstaller.exe -F -i "oszli-icon.ico" -w endlostafel.py
 
 log = logging.getLogger(__name__)
-VERSION='2.3'
+VERSION='2.4'
 
 
 class Editor(QMainWindow):
