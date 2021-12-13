@@ -21,7 +21,7 @@ from functools import partial
 import os
 import psutil
 
-from PySide6.QtCore import QEvent, QLocale, QSettings, QSize, QTime, QTimer, Qt, Signal
+from PySide6.QtCore import QEvent, QLocale, QMarginsF, QSettings, QSize, QTime, QTimer, Qt, Signal
 from PySide6.QtSvg import QSvgGenerator
 from PySide6.QtGui import QAction, QActionGroup, QCloseEvent, QColor, QGuiApplication, QPainter, QPixmap, QPalette
 from PySide6.QtWidgets import QApplication, QFileDialog, QFrame, QGraphicsItem, QGraphicsTextItem, QLCDNumber, QLabel, QMainWindow, QMenu, QMessageBox, QSizePolicy, QToolBar, QToolButton, QWidget, QWidgetAction
@@ -406,13 +406,9 @@ class Editor(QMainWindow):
             return
 
         backgroundcolor = self.palette().color(QPalette.Base)
-        rect = self._tafelview.sceneRect()
-        w, h = rect.size().toTuple()
+        rect = self._tafelview.scene().itemsBoundingRect().marginsAdded(QMarginsF(50,50,50,50))
         generator = QSvgGenerator()
         generator.setFileName(filename)
-        # auskommentiert. Hier sind nur Integers erlaubt, was sich in
-        # einer leichten Skalierung bemerkbar machen würde.
-        # generator.setSize(QSize(int(w), int(h)))
         generator.setViewBox(rect)
         generator.setTitle('Tafelbild')
         generator.setDescription('Tafelbild')
