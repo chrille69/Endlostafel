@@ -311,7 +311,8 @@ class Editor(QMainWindow):
         self._ungespeichert = True
 
     def displayMemoryUsage(self):
-        megabytes = self._process.memory_info().rss/1048576
+        bytes = self._process.memory_info().rss
+        megabytes = bytes/1048576
         anzahl = len(self._tafelview.scene().items())
         self._speicherlabel.setText(f'{anzahl} Elemente, Speichernutzung: {megabytes:10.2f}MB')
 
