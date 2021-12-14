@@ -414,6 +414,7 @@ class Editor(QMainWindow):
         generator.setTitle('Tafelbild')
         generator.setDescription('Tafelbild')
         generator.setResolution(QGuiApplication.primaryScreen().physicalDotsPerInch())
+        generator.setSize(rect.size().toSize())
         painter = QPainter()
         painter.begin(generator)
         if backgroundcolor != QColor(Qt.white):
