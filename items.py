@@ -73,6 +73,8 @@ class Pfad(QGraphicsPathItem):
         clonepfad.setPos(self.pos())
         clonepfad.setScale(self.scale())
         clonepfad.change()
+        if self._shape:
+            clonepfad.setShape(self._shape)
         return clonepfad
 
     def removeElements(self, ellipse: QGraphicsEllipseItem):
@@ -302,11 +304,6 @@ class Karopapier(Pfad):
         shape.lineTo(0, self._length)
         self.setShape(shape)
 
-    def clone(self):
-        new = super().clone()
-        new.setShape(self.shape())
-        return new
-
 
 class Linienpapier(Pfad):
     def __init__(self, view: QGraphicsView):
@@ -330,11 +327,6 @@ class Linienpapier(Pfad):
         shape.lineTo(self._length, self._length)
         shape.lineTo(0, self._length)
         self.setShape(shape)
-
-    def clone(self):
-        new = super().clone()
-        new.setShape(self.shape())
-        return new
 
 
 class MmLogPapier(QGraphicsRectItem):
