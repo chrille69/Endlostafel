@@ -28,7 +28,7 @@ Folgende Funktionen stehen zur Verfügung:
 * Pfeile
 * Einfache geometrische Formen wie Kreise, Ellipsen, Quadrate und Rechtecke
 * Kariertes Papier, liniertes Papier, Logarithmuspapier, Millimeterpapier
-* Einblenden eines Geodreiecks
+* Einblenden eines Geodreiecks mit Snap-Funktion
 * Verschieben und Löschen einzelner Elemente
 * Speichern der Inhalte als SVG-Dateien
 * Laden von SVGs und Bitmaps
