@@ -36,6 +36,8 @@ Folgende Funktionen stehen zur Verfügung:
 * Speichern einiger weniger Voreinstellungen
 * Zoomen einzelner Elemente oder der gesamten Zeichenfläche
 
+Einmal gespeicherte Tafelbilder können im nachhinein **nicht** mehr bearbeitet werden.
+
 ## Technische Details
 
 Das Programm ist in Python 3 geschrieben (https://www.python.org/) und benötigt
