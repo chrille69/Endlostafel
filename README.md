@@ -48,10 +48,6 @@ Datei **pyinstaller**, die mit Hilfe von **pip** installiert werden können.
 Pyside6 ist eine von Qt zur Verfügung gestellte Python-Anbindung an die Bibliotheken von Qt (https://www.qt.io/).
 SVG Grafiken werden über Qt verarbeitet und sind daher im Rahmen von XSVG  implementiert (https://doc.qt.io/qt-5/qtsvg-attribution-xsvg.html).
 
-### Psutil
-Psutil ist eine Bibliothek mit der Prozessparameter der jeweiligen Plattform abgefragt werden können (z.B. verwendeter Speicher).
-Unter Windows muss zusätzlich Visual Studio installiert werden. Weitere Informationen unter https://pypi.org/project/psutil/
-
 ### Pyinstaller
 Um unter Windows eine ausführbare Datei zu erzeugen, verwendet man den Befehl:
 
