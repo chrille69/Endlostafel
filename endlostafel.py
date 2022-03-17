@@ -18,8 +18,6 @@
 import sys
 import logging
 from functools import partial
-import os
-import psutil
 
 from PySide6.QtCore import QEvent, QLocale, QMarginsF, QSettings, QSize, QTime, QTimer, Qt, Signal
 from PySide6.QtSvg import QSvgGenerator
@@ -37,7 +35,7 @@ from paletten import dark as paletteDark, light as paletteLight
 # pyinstaller.exe -F -i "oszli-icon.ico" -w endlostafel.py
 
 log = logging.getLogger(__name__)
-VERSION='2.5'
+VERSION='2.6'
 
 
 class Editor(QMainWindow):
@@ -76,7 +74,6 @@ class Editor(QMainWindow):
         self.setCentralWidget(self._tafelview)
 
         # Die Statusleiste wird gebastelt
-        self._process = psutil.Process(os.getpid())
         self._speicherlabel = QLabel()
         self.statusBar().addWidget(uhr, 1)
         self.statusBar().addPermanentWidget(self._speicherlabel)
@@ -311,10 +308,8 @@ class Editor(QMainWindow):
         self._ungespeichert = True
 
     def displayMemoryUsage(self):
-        bytes = self._process.memory_info().rss
-        megabytes = bytes/1048576
         anzahl = len(self._tafelview.scene().items())
-        self._speicherlabel.setText(f'{anzahl} Elemente, Speichernutzung: {megabytes:10.2f}MB')
+        self._speicherlabel.setText(f'{anzahl} Element' + ('' if anzahl == 1 else 'e') )
 
     def clearall(self):
         if self.ungespeichertFortfahren('Trotzdem alles löschen'):
