@@ -19,7 +19,7 @@ import sys
 import logging
 from functools import partial
 
-from PySide6.QtCore import QEvent, QLocale, QMarginsF, QSettings, QSize, QTime, QTimer, Qt, Signal
+from PySide6.QtCore import QEvent, QLocale, QMarginsF, QSettings, QTime, QTimer, Qt, Signal
 from PySide6.QtSvg import QSvgGenerator
 from PySide6.QtGui import QAction, QActionGroup, QCloseEvent, QColor, QGuiApplication, QPainter, QPixmap, QPalette
 from PySide6.QtWidgets import QApplication, QFileDialog, QFrame, QGraphicsItem, QGraphicsTextItem, QLCDNumber, QLabel, QMainWindow, QMenu, QMessageBox, QSizePolicy, QToolBar, QToolButton, QWidget, QWidgetAction
