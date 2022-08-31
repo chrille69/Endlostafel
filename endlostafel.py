@@ -18,10 +18,8 @@
 import sys
 import logging
 from functools import partial
-import os
-import psutil
 
-from PySide6.QtCore import QEvent, QLocale, QSettings, QSize, QTime, QTimer, Qt, Signal
+from PySide6.QtCore import QEvent, QLocale, QMarginsF, QSettings, QTime, QTimer, Qt, Signal
 from PySide6.QtSvg import QSvgGenerator
 from PySide6.QtGui import QAction, QActionGroup, QCloseEvent, QColor, QGuiApplication, QPainter, QPixmap, QPalette
 from PySide6.QtWidgets import QApplication, QFileDialog, QFrame, QGraphicsItem, QGraphicsTextItem, QLCDNumber, QLabel, QMainWindow, QMenu, QMessageBox, QSizePolicy, QToolBar, QToolButton, QWidget, QWidgetAction, QColorDialog
@@ -37,7 +35,7 @@ from paletten import dark as paletteDark, light as paletteLight
 # pyinstaller.exe -F -i "oszli-icon.ico" -w endlostafel.py
 
 log = logging.getLogger(__name__)
-VERSION='2.3'
+VERSION='2.6'
 
 
 class Editor(QMainWindow):
@@ -76,7 +74,6 @@ class Editor(QMainWindow):
         self.setCentralWidget(self._tafelview)
 
         # Die Statusleiste wird gebastelt
-        self._process = psutil.Process(os.getpid())
         self._speicherlabel = QLabel()
         self.statusBar().addWidget(uhr, 1)
         self.statusBar().addPermanentWidget(self._speicherlabel)
@@ -316,9 +313,8 @@ class Editor(QMainWindow):
         self._ungespeichert = True
 
     def displayMemoryUsage(self):
-        megabytes = self._process.memory_info().rss/1048576
         anzahl = len(self._tafelview.scene().items())
-        self._speicherlabel.setText(f'{anzahl} Elemente, Speichernutzung: {megabytes:10.2f}MB')
+        self._speicherlabel.setText(f'{anzahl} Element' + ('' if anzahl == 1 else 'e') )
 
     def clearall(self):
         if self.ungespeichertFortfahren('Trotzdem alles löschen'):
@@ -411,21 +407,19 @@ class Editor(QMainWindow):
             return
 
         backgroundcolor = self.palette().color(QPalette.Base)
-        tafel = self._tafelview.scene()
-        rect = self._tafelview.scene().sceneRect()
-        w, h = rect.size().toTuple()
+        rect = self._tafelview.scene().itemsBoundingRect().marginsAdded(QMarginsF(50,50,50,50))
         generator = QSvgGenerator()
         generator.setFileName(filename)
-        generator.setSize(QSize(int(w), int(h)))
         generator.setViewBox(rect)
         generator.setTitle('Tafelbild')
         generator.setDescription('Tafelbild')
         generator.setResolution(QGuiApplication.primaryScreen().physicalDotsPerInch())
+        generator.setSize(rect.size().toSize())
         painter = QPainter()
         painter.begin(generator)
         if backgroundcolor != QColor(Qt.white):
             painter.fillRect(rect,backgroundcolor)
-        tafel.render(painter,rect)
+        self._tafelview.scene().render(painter,rect,rect)
         painter.end()
         self._ungespeichert = False
 

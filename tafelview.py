@@ -18,7 +18,7 @@
 from PySide6 import QtCore
 from PySide6.QtCore import QEvent, QPointF, QRect, QRectF, QSizeF, Qt, Signal, qDebug, qWarning
 from PySide6.QtGui import QBrush, QColor, QPainter, QPalette, QPen, QResizeEvent, QTransform
-from PySide6.QtWidgets import QApplication, QGraphicsEllipseItem, QGraphicsScene, QGraphicsView, QMessageBox, QToolButton, QWidget
+from PySide6.QtWidgets import QApplication, QGraphicsEllipseItem, QGraphicsItem, QGraphicsScene, QGraphicsView, QMessageBox, QToolButton, QWidget
 
 from icons import getNameCursor, getIconSvg
 from items import Ellipse, Kreis, Line, LineSnap, Pfad, Pfeil, PfeilSnap, Punkt, Quadrat, Rechteck, Stift
@@ -340,9 +340,8 @@ class Tafelview(QGraphicsView):
         for item in self.scene().items(ellipse.shape()):
             if hasattr(item,'removeElements') and callable(item.removeElements):
                 item.removeElements(ellipse)
-            if hasattr(item,'path') and callable(item.path):
-                if item.path().elementCount() < 2:
-                    self.scene().removeItem(item)
+            if hasattr(item,'path') and callable(item.path) and item.path().elementCount() < 2:
+                self.scene().removeItem(item)
 
     def deleteItems(self):
         if not self.scene().selectedItems():
@@ -374,6 +373,20 @@ class Tafelview(QGraphicsView):
         if not funktioniert_nicht:
             self.statusbarinfo.emit('Die Elemente sind kopiert. Bitte jetzt verschieben...',5000)
 
+    def importItem(self, item):
+        self.scene().addItem(item)
+        item.setPos(self.mapToScene(0,0))
+        self.berechneSceneRectNeu(item)
+
+        self.statusbarinfo.emit('Das Element oben links eingefügt. Bitte jetzt verschieben...',5000)
+        self.eswurdegemalt.emit() 
+
+    def berechneSceneRectNeu(self, item: QGraphicsItem):
+        # Mögliche Erweiterung des sceneRect berechnen
+        rect = item.sceneBoundingRect()
+        rect |= self.sceneRect()
+        self.setSceneRect(rect)
+
     def erweitern(self, richtung):
         scenerect = self.sceneRect()
         viewrect = self.mapToScene(self.viewport().geometry()).boundingRect()
@@ -399,29 +412,13 @@ class Tafelview(QGraphicsView):
                 scenerect.setLeft(punkt.x() - halb)
                 self.setSceneRect(scenerect)
             self.centerOn(punkt)
-        elif richtung == 'left':
+        elif richtung == 'right':
             halb = viewrect.width()/2
             punkt = center + QPointF(halb,0)
             if not scenerect.contains(punkt + QPointF(halb,0)):
-                scenerect.setLeft(punkt.x() + halb)
+                scenerect.setRight(punkt.x() + halb)
                 self.setSceneRect(scenerect)
             self.centerOn(punkt)
-
-    def importItem(self, item):
-        self.scene().addItem(item)
-        item.setPos(self.mapToScene(self.viewport().rect().topLeft()))
-
-        self.berechneSceneRectNeu(item)
-
-        self.statusbarinfo.emit('Das Element oben links eingefügt. Bitte jetzt verschieben...',5000)
-        self.eswurdegemalt.emit() 
-
-    def berechneSceneRectNeu(self, item):
-        # Mögliche Erweiterung des sceneRect berechnen
-        rect = item.mapToScene(item.boundingRect()).boundingRect()
-        rect |= self.sceneRect()
-        self.setSceneRect(rect)
-        self.scene().setSceneRect(rect)
 
     def undo(self):
         items = self.scene().items()

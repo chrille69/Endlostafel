@@ -28,13 +28,15 @@ Folgende Funktionen stehen zur Verfügung:
 * Pfeile
 * Einfache geometrische Formen wie Kreise, Ellipsen, Quadrate und Rechtecke
 * Kariertes Papier, liniertes Papier, Logarithmuspapier, Millimeterpapier
-* Einblenden eines Geodreiecks
+* Einblenden eines Geodreiecks mit Snap-Funktion
 * Verschieben und Löschen einzelner Elemente
 * Speichern der Inhalte als SVG-Dateien
 * Laden von SVGs und Bitmaps
 * Einfügen der Zwischenablage als Grafik
 * Speichern einiger weniger Voreinstellungen
 * Zoomen einzelner Elemente oder der gesamten Zeichenfläche
+
+Einmal gespeicherte Tafelbilder können im nachhinein **nicht** mehr bearbeitet werden.
 
 ## Technische Details
 
@@ -45,10 +47,6 @@ Datei **pyinstaller**, die mit Hilfe von **pip** installiert werden können.
 ### Pyside6
 Pyside6 ist eine von Qt zur Verfügung gestellte Python-Anbindung an die Bibliotheken von Qt (https://www.qt.io/).
 SVG Grafiken werden über Qt verarbeitet und sind daher im Rahmen von XSVG  implementiert (https://doc.qt.io/qt-5/qtsvg-attribution-xsvg.html).
-
-### Psutil
-Psutil ist eine Bibliothek mit der Prozessparameter der jeweiligen Plattform abgefragt werden können (z.B. verwendeter Speicher).
-Unter Windows muss zusätzlich Visual Studio installiert werden. Weitere Informationen unter https://pypi.org/project/psutil/
 
 ### Pyinstaller
 Um unter Windows eine ausführbare Datei zu erzeugen, verwendet man den Befehl:
