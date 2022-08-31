@@ -318,5 +318,40 @@ iconssvg = {
             <path d="m1 7 3-3 6 4" style="fill:none;stroke-width:1px;stroke:{htmlcolor}"/>
             <path d="m13 15v-4" style="fill:none;stroke-width:1px;stroke:{htmlcolor}"/>
             <path d="m11 13h4" style="fill:none;stroke-width:1px;stroke:{htmlcolor}"/>
-        </svg>'''
+        </svg>''',
+    'customcolor': '''
+        <svg
+           width="16"
+           height="16"
+           version="1.1"
+           xmlns="http://www.w3.org/2000/svg"
+           xmlns:svg="http://www.w3.org/2000/svg">
+          <defs
+             id="defs8" />
+          <rect
+             style="fill:#ffcc00;stroke-width:2.923;stroke-linejoin:round;stroke-opacity:0"
+             width="6"
+             height="5"
+             x="1.5"
+             y="2.5" />
+          <rect
+             style="fill:#ff00cc;stroke-width:2.923;stroke-linejoin:round;stroke-opacity:0"
+             width="5.9934287"
+             height="5"
+             x="8.5065708"
+             y="2.5" />
+          <rect
+             style="fill:#2ad4ff;stroke-width:2.923;stroke-linejoin:round;stroke-opacity:0"
+             width="6"
+             height="4.9934287"
+             x="1.5"
+             y="8.5065708" />
+          <rect
+             style="fill:#8dd35f;stroke-width:2.923;stroke-linejoin:round;stroke-opacity:0"
+             width="5.9934292"
+             height="4.9934292"
+             x="8.5065708"
+             y="8.5065708" />
+        </svg>
+    '''
 }

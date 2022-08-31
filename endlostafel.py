@@ -22,7 +22,7 @@ from functools import partial
 from PySide6.QtCore import QEvent, QLocale, QMarginsF, QSettings, QTime, QTimer, Qt, Signal
 from PySide6.QtSvg import QSvgGenerator
 from PySide6.QtGui import QAction, QActionGroup, QCloseEvent, QColor, QGuiApplication, QPainter, QPixmap, QPalette
-from PySide6.QtWidgets import QApplication, QFileDialog, QFrame, QGraphicsItem, QGraphicsTextItem, QLCDNumber, QLabel, QMainWindow, QMenu, QMessageBox, QSizePolicy, QToolBar, QToolButton, QWidget, QWidgetAction
+from PySide6.QtWidgets import QApplication, QFileDialog, QFrame, QGraphicsItem, QGraphicsTextItem, QLCDNumber, QLabel, QMainWindow, QMenu, QMessageBox, QSizePolicy, QToolBar, QToolButton, QWidget, QWidgetAction, QColorDialog
 
 
 from icons import getIconColor, getIconSvg
@@ -35,7 +35,7 @@ from paletten import dark as paletteDark, light as paletteLight
 # pyinstaller.exe -F -i "oszli-icon.ico" -w endlostafel.py
 
 log = logging.getLogger(__name__)
-VERSION='2.6'
+VERSION='2.7'
 
 
 class Editor(QMainWindow):
@@ -87,7 +87,7 @@ class Editor(QMainWindow):
 
         # Actions erzeugen
         actC1 = Action( 'foreground', 'Normal', self, iscolor=True)
-        actC2 = Action(       'blue',   'Blau', self, iscolor=True)
+        actC2 = Action(  'royalblue',   'Blau', self, iscolor=True)
         actC3 = Action(        'red',    'Rot', self, iscolor=True)
         actC4 = Action(      'green',   'Grün', self, iscolor=True)
         self._coloractions = {
@@ -98,6 +98,10 @@ class Editor(QMainWindow):
         }
         self._colorgroup = QActionGroup(self)
         self.configureActionDict(self._coloractions, self._colorgroup, self.pencolorChanged.emit)
+        actCbel = Action('customcolor', 'Farbauswahldialog', self)
+        actCbel.setCheckable(True)
+        actCbel.triggered.connect(self.customcolor)
+        self._colorgroup.addAction(actCbel)
 
         actP1 = Action( 'pensize-1px',  '1px', self)
         actP2 = Action( 'pensize-3px',  '3px', self)
@@ -205,6 +209,7 @@ class Editor(QMainWindow):
         toolframe.addAction(actC2)
         toolframe.addAction(actC3)
         toolframe.addAction(actC4)
+        toolframe.addAction(actCbel)
         toolframe.addSeparator()
 
         toolframe.addAction(actP1)
@@ -461,6 +466,10 @@ class Editor(QMainWindow):
             </ul>
             <p>Berlin, November 2021</p>'''
         QMessageBox.about(self, 'Über Endlostafel',text)
+
+    def customcolor(self):
+        color = QColorDialog.getColor(parent=self)
+        self.pencolorChanged.emit(color.name())
 
 
 class Action(QAction):
