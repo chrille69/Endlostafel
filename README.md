@@ -41,7 +41,7 @@ Einmal gespeicherte Tafelbilder können im nachhinein **nicht** mehr bearbeitet 
 ## Technische Details
 
 Das Programm ist in Python 3 geschrieben (https://www.python.org/) und benötigt
-die Bibliotheken **pyside6**, **psutil** und zum Erzeugen einer statischen, ausführbaren
+die Bibliotheken **pyside6** und zum Erzeugen einer statischen, ausführbaren
 Datei **pyinstaller**, die mit Hilfe von **pip** installiert werden können.
 
 ### Pyside6
