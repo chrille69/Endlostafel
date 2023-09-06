@@ -28,6 +28,7 @@ class Pfad(QGraphicsPathItem):
         self._view = view
         self._firstpos = pos
         self._fgcolor = view.fgcolor()
+        self.setAcceptTouchEvents(True)
         self.setPen(pen)
         self.setBrush(brush)
         self.setPath(QPainterPath(pos))
@@ -114,10 +115,6 @@ class Pfad(QGraphicsPathItem):
         n = QPointF(pos2.y()-pos1.y(),pos1.x()-pos2.x())
         d = abs(((m.x()-pos1.x())*n.x()+(m.y()-pos1.y())*n.y()) / sqrt(n.x()*n.x()+n.y()*n.y()))
         return d < r
-
-
-
-
 
 
 class Stift(Pfad):
