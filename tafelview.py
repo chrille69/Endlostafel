@@ -323,7 +323,6 @@ class Tafelview(QGraphicsView):
                 print('Mehr als ein Punkt')
             else:
                 if self.isBigPoint(event.points()[0]):
-                    print('Bigpoint')
                     if not self._tmpStatus:
                         self._tmpStatus = self._status
                         self.setStatus(Tafelview.statusRadiere)
