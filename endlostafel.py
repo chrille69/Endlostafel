@@ -576,7 +576,7 @@ if __name__ == "__main__":
     if options['rubberfactor']:
         settings.setValue('editor/rubberfactor', options['rubberfactor'])    
     if not settings.value('editor/rubberfactor'):
-        settings.setValue('editor/rubberfactor', 10)
+        settings.setValue('editor/rubberfactor', 0.002)
 
     d = Editor(settings, options['debug'])
     logger = logging.getLogger('GUI')
