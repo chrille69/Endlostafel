@@ -15,7 +15,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see https://www.gnu.org/licenses/.
 
-from tkinter import E
+import logging
 from PySide6 import QtCore
 from PySide6.QtCore import QEvent, QPointF, QRect, QRectF, QSizeF, Qt, Signal
 from PySide6.QtGui import QBrush, QColor, QPainter, QPalette, QPen, QResizeEvent, QTransform
@@ -25,6 +25,7 @@ from icons import getNameCursor, getIconSvg
 from items import Ellipse, Kreis, Line, LineSnap, Pfad, Pfeil, PfeilSnap, Punkt, Quadrat, Rechteck, Stift
 from geodreieck import Geodreieck
 
+logger = logging.getLogger('GUI')
 
 class Tafelview(QGraphicsView):
 
@@ -252,8 +253,11 @@ class Tafelview(QGraphicsView):
         self._currentItem = item
 
     def deleteCurrentItem(self):
-        self.scene().removeItem(self._currentItem)
-        self._currentItem = None
+        try:
+            self.scene().removeItem(self._currentItem)
+            self._currentItem = None
+        except Exception as e:
+            logger.exception(e, exc_info=True)
 
     def scenePosFromEvent(self, event):
         tp = event.points().pop()
@@ -325,6 +329,7 @@ class Tafelview(QGraphicsView):
 
     def viewportEvent(self, event: QtCore.QEvent) -> bool:
         
+        logger.debug(event.type())
         if self._status == Tafelview.statusEdit:
             return super().viewportEvent(event)
 

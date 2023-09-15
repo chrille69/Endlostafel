@@ -19,7 +19,7 @@ import sys
 import logging
 from functools import partial
 
-from PySide6.QtCore import QEvent, QLocale, QMarginsF, QSettings, QTime, QTimer, Qt, Signal, QCoreApplication
+from PySide6.QtCore import QEvent, QLocale, QMarginsF, QSettings, QTime, QTimer, Qt, Signal
 from PySide6.QtSvg import QSvgGenerator
 from PySide6.QtGui import QAction, QActionGroup, QCloseEvent, QColor, QGuiApplication, QPainter, QPixmap, QPalette
 from PySide6.QtWidgets import QApplication, QFileDialog, QFrame, QGraphicsItem, QGraphicsTextItem, QLCDNumber, QLabel, QMainWindow, QMenu, QMessageBox, QSizePolicy, QToolBar, QToolButton, QWidget, QWidgetAction, QColorDialog
@@ -30,11 +30,11 @@ from items import Pixelbild, SVGBild, Karopapier, Linienpapier
 from vordrucke import MmLogDialog
 from tafelview import Tafelview
 from paletten import dark as paletteDark, light as paletteLight
+from logwindow import LogWindowHandler, LogWindow
 
 # Zum Erzeugen der exe:
 # pyinstaller.exe -F -i "oszli-icon.ico" -w endlostafel.py
 
-log = logging.getLogger(__name__)
 VERSION='2.10'
 
 
@@ -58,11 +58,14 @@ class Editor(QMainWindow):
     linienpapierClicked = Signal()
 
 
-    def __init__(self, settings: QSettings):
+    def __init__(self, settings: QSettings, debug=False):
         super().__init__()
         QApplication.instance().applicationStateChanged.connect(self.lateInit)
 
+        self.logwindow = LogWindow(self)
+
         self._settings = settings
+        self._debug = debug
         self._ungespeichert = False
         uhr = Uhr(self)
 
@@ -79,8 +82,6 @@ class Editor(QMainWindow):
         self.statusBar().addPermanentWidget(self._speicherlabel)
         self.statusBar().addPermanentWidget(QLabel(f'Version {VERSION} '))
         self.displayMemoryUsage()
-
-
 
         # keine Kontextmenüs
         self.setContextMenuPolicy(Qt.NoContextMenu)
@@ -299,6 +300,9 @@ class Editor(QMainWindow):
             self._fullscreenAction.setChecked(self.isFullScreen())
             self._tafelview.setSceneRectFromViewport()
             QApplication.instance().applicationStateChanged.disconnect()
+        if self._debug:
+            self.logwindow.show()
+
 
     def event(self, ev: QEvent):
         if ev.type() == QEvent.ApplicationPaletteChange:
@@ -462,7 +466,8 @@ class Editor(QMainWindow):
             <h3>Autor: Christian Hoffmann</h3>
             <p>Dieses Programm stellt ein einfaches Schreibwerkzeug für den Frontalunterricht dar.</p>
             <h4>Kommandozeilenoptionen</h4>
-            <p><code>--show [fullscreen,maximized,normal]<br/>
+            <p><code>--debug<br/>
+            --show [fullscreen,maximized,normal]<br/>
             --rubbervalue [float]<br/>
             --rubberfactor [float]</code></p>
             <p>Startet die Tafel in Vollbild, maximiertem Fenster oder Fenster in Normalgröße. Bei
@@ -544,6 +549,7 @@ class Uhr(QLCDNumber):
 if __name__ == "__main__":
     from argparse import ArgumentParser
     parser = ArgumentParser(description='Endlostafel für das digitale Klassenzimmer. Einfach nur schreiben.')
+    parser.add_argument('--debug',action='store_true',help='Öffnet ein Log-Window mit Debug-Meldungen.')
     parser.add_argument('--show',help='Wie soll die Tafel geöffnet werden (default: maximized)? normal, fullscreen, maximized')
     parser.add_argument('--rubbervalue',type=float,help='Ab welcher Größe des TouchPoints soll auf Radieren umgeschaltet werden?')
     parser.add_argument('--rubberfactor',type=float,help='Wie soll der Radiergummi skaliert werden?')
@@ -572,7 +578,12 @@ if __name__ == "__main__":
     if not settings.value('editor/rubberfactor'):
         settings.setValue('editor/rubberfactor', 10)
 
-    d = Editor(settings)
+    d = Editor(settings, options['debug'])
+    logger = logging.getLogger('GUI')
+    handler = LogWindowHandler(d.logwindow)
+    logger.addHandler(handler)
+    logger.setLevel(logging.DEBUG if options['debug'] else logging.INFO)
+
     if showmode == 'normal':
         d.resize(800,600)
         d.showNormal()
@@ -580,5 +591,6 @@ if __name__ == "__main__":
         d.showFullScreen()
     else:
         d.showMaximized()
+
     sys.exit(app.exec())
 
