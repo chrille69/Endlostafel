@@ -35,7 +35,7 @@ from paletten import dark as paletteDark, light as paletteLight
 # pyinstaller.exe -F -i "oszli-icon.ico" -w endlostafel.py
 
 log = logging.getLogger(__name__)
-VERSION='2.9'
+VERSION='2.10'
 
 
 class Editor(QMainWindow):
@@ -311,7 +311,10 @@ class Editor(QMainWindow):
 
     def rubbervalue(self):
         return float(self._settings.value('editor/rubbervalue'))
-    
+
+    def rubberfactor(self):
+        return float(self._settings.value('editor/rubberfactor'))
+
     def setUngespeichert(self):
         self._ungespeichert = True
 
@@ -392,9 +395,11 @@ class Editor(QMainWindow):
             <tr><td align='right'>Dunkler Modus:&nbsp;</td><td>{self._settings.value('editor/darkmode')}</td></tr>
             <tr><td align='right'>Start der Anwendung:&nbsp;</td><td>{self._settings.value('editor/show')}</td></tr>
             <tr><td align='right'>Empfindlichkeit Radieren:&nbsp;</td><td>{self._settings.value('editor/rubbervalue')}</td></tr>
+            <tr><td align='right'>Faktor Radieren:&nbsp;</td><td>{self._settings.value('editor/rubberfactor')}</td></tr>
         </table>
         <p>Der Start der Anwendung kann mit der Kommandozeilenoption <code>--show [fullscreen,maximized,normal]</code> gesetzt werden.</p>
-        <p>Die Stärke zum Radieren kann mit der Kommandozeilenoption <code>--rubbervalue [float]</code> gesetzt werden.</p>'''
+        <p>Die Stärke zum Radieren kann mit der Kommandozeilenoption <code>--rubbervalue [float]</code> gesetzt werden.</p>
+        <p>Die Größe beim Radieren kann mit der Kommandozeilenoption <code>--rubberfactor [float]</code> gesetzt werden.</p>'''
         QMessageBox.information(self,'Einstellungen speichern',text)
 
     def settingShowName(self):
@@ -458,7 +463,8 @@ class Editor(QMainWindow):
             <p>Dieses Programm stellt ein einfaches Schreibwerkzeug für den Frontalunterricht dar.</p>
             <h4>Kommandozeilenoptionen</h4>
             <p><code>--show [fullscreen,maximized,normal]<br/>
-            --rubbervalue [float]</code></p>
+            --rubbervalue [float]<br/>
+            --rubberfactor [float]</code></p>
             <p>Startet die Tafel in Vollbild, maximiertem Fenster oder Fenster in Normalgröße. Bei
             einem ungültigen Wert, wird maximized angenommen. Ist diese Option nicht gegeben, wird der Wert
             in den Einstellungen angenommen. Ist der Wert in den Einstellungen nicht gesetzt, wird mit
@@ -539,7 +545,8 @@ if __name__ == "__main__":
     from argparse import ArgumentParser
     parser = ArgumentParser(description='Endlostafel für das digitale Klassenzimmer. Einfach nur schreiben.')
     parser.add_argument('--show',help='Wie soll die Tafel geöffnet werden (default: maximized)? normal, fullscreen, maximized')
-    parser.add_argument('--rubbervalue',type=float,help='Ab welcher Größe des TouchPoints soll auf Radieren umgeschaltet werden? (default: 2)')
+    parser.add_argument('--rubbervalue',type=float,help='Ab welcher Größe des TouchPoints soll auf Radieren umgeschaltet werden?')
+    parser.add_argument('--rubberfactor',type=float,help='Wie soll der Radiergummi skaliert werden?')
     options=vars(parser.parse_args())
 
     QLocale.setDefault(QLocale.German)
@@ -556,10 +563,14 @@ if __name__ == "__main__":
         showmode = settings.value('editor/show','maximized')
 
     if options['rubbervalue']:
-        settings.setValue('editor/rubbervalue', options['rubbervalue'])
-    
+        settings.setValue('editor/rubbervalue', options['rubbervalue'])    
     if not settings.value('editor/rubbervalue'):
         settings.setValue('editor/rubbervalue', 1500)
+
+    if options['rubberfactor']:
+        settings.setValue('editor/rubberfactor', options['rubberfactor'])    
+    if not settings.value('editor/rubberfactor'):
+        settings.setValue('editor/rubberfactor', 10)
 
     d = Editor(settings)
     if showmode == 'normal':
