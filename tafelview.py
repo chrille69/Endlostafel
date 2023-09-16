@@ -62,11 +62,13 @@ class Tafelview(QGraphicsView):
         super().__init__(parent)
         self._status = status
         self._tmpStatus = None
+        self._painting = False
+        self._gestureActive = False
+        self._dreheGeo: bool = None
+        self._verschiebeGeo: bool = None
         self.setDragMode(QGraphicsView.RubberBandDrag)
         self.viewport().setAttribute(Qt.WA_AcceptTouchEvents, True)
         self.viewport().grabGesture(Qt.PinchGesture)
-        self._painting = False
-        self._gestureActive = False
         tafel = QGraphicsScene(self)
         self.setScene(tafel)
         self.setBackgroundBrush(QColor(Qt.transparent))
@@ -74,8 +76,6 @@ class Tafelview(QGraphicsView):
         self._redoitems = []
         self._lastPos: QPointF = None
         self._tmpRadierdurchmesser = None
-        self._dreheGeo: bool = None
-        self._verschiebeGeo: bool = None
         self._drawpen = QPen(qcolor, pensize, Qt.SolidLine, c=Qt.RoundCap, j=Qt.RoundJoin)
         self._drawpen.setCosmetic(True)
         self._drawbrush = Qt.NoBrush
@@ -317,7 +317,10 @@ class Tafelview(QGraphicsView):
         self.eswurdegemalt.emit()
 
     def touchPointSize(self, point):
-        return point.ellipseDiameters().height()**2 + point.ellipseDiameters().width()**2
+        ellipse = point.ellipseDiameters()
+        area = ellipse.height()**2 + ellipse.width()**2
+        logger.debug(f"Pointsize: {ellipse}, Fläche={area}")
+        return area
     
     def isBigPoint(self, point) -> True:
         return self.touchPointSize(point) > self._rubbervalue

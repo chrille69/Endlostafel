@@ -19,10 +19,10 @@ import sys
 import logging
 from functools import partial
 
-from PySide6.QtCore import QEvent, QLocale, QMarginsF, QSettings, QTime, QTimer, Qt, Signal
+from PySide6.QtCore import QEvent, QLocale, QMarginsF, QSettings, QDate, QTime, QTimer, Qt, Signal
 from PySide6.QtSvg import QSvgGenerator
-from PySide6.QtGui import QAction, QActionGroup, QCloseEvent, QColor, QGuiApplication, QPainter, QPixmap, QPalette
-from PySide6.QtWidgets import QApplication, QFileDialog, QFrame, QGraphicsItem, QGraphicsTextItem, QLCDNumber, QLabel, QMainWindow, QMenu, QMessageBox, QSizePolicy, QToolBar, QToolButton, QWidget, QWidgetAction, QColorDialog
+from PySide6.QtGui import QAction, QActionGroup, QCloseEvent, QColor, QGuiApplication, QPainter, QPixmap, QPalette, QFont
+from PySide6.QtWidgets import QApplication, QFileDialog, QGraphicsItem, QGraphicsTextItem, QLabel, QMainWindow, QMenu, QMessageBox, QSizePolicy, QToolBar, QToolButton, QWidget, QWidgetAction, QColorDialog
 
 
 from icons import getIconColor, getIconSvg
@@ -78,7 +78,7 @@ class Editor(QMainWindow):
 
         # Die Statusleiste wird gebastelt
         self._speicherlabel = QLabel()
-        self.statusBar().addWidget(uhr, 1)
+        self.statusBar().addWidget(uhr)
         self.statusBar().addPermanentWidget(self._speicherlabel)
         self.statusBar().addPermanentWidget(QLabel(f'Version {VERSION} '))
         self.displayMemoryUsage()
@@ -300,8 +300,8 @@ class Editor(QMainWindow):
             self._fullscreenAction.setChecked(self.isFullScreen())
             self._tafelview.setSceneRectFromViewport()
             QApplication.instance().applicationStateChanged.disconnect()
-        if self._debug:
-            self.logwindow.show()
+            if self._debug:
+                self.logwindow.show()
 
 
     def event(self, ev: QEvent):
@@ -466,7 +466,7 @@ class Editor(QMainWindow):
             <h3>Autor: Christian Hoffmann</h3>
             <p>Dieses Programm stellt ein einfaches Schreibwerkzeug für den Frontalunterricht dar.</p>
             <h4>Kommandozeilenoptionen</h4>
-            <p><code>--debug<br/>
+            <p><code>--logging [debug,info,warning,error,critical]<br/>
             --show [fullscreen,maximized,normal]<br/>
             --rubbervalue [float]<br/>
             --rubberfactor [float]</code></p>
@@ -526,12 +526,14 @@ class ActionWidget(QWidgetAction):
         self.button.setPopupMode(mode)
 
 
-class Uhr(QLCDNumber):
+class Uhr(QLabel):
     def __init__(self, parent):
         super().__init__(parent)
 
-        self.setSegmentStyle(QLCDNumber.Flat)
-        self.setFrameShape(QFrame.NoFrame)
+        #self.setStyleSheet("font-size: 14pt; font-family: Courier; font-weight: bold;")
+        self.setTextFormat(Qt.PlainText)
+        font = QFont("Courier", 14, QFont.Bold)
+        self.setFont(font)
 
         timer = QTimer(self)
         timer.timeout.connect(self.anzeige)
@@ -540,19 +542,20 @@ class Uhr(QLCDNumber):
 
     def anzeige(self):
         time = QTime.currentTime()
-        text = time.toString('hh:mm')
+        date = QDate.currentDate()
+        text = date.toString('dd.MMM yyyy')+' - '+time.toString('hh:mm')
         if time.second() % 2 == 0:
-            text = text[:2]+' '+text[-2:]
-        self.display(text)
+            text = text[:-3]+' '+text[-2:]
+        self.setText(text)
 
 
 if __name__ == "__main__":
     from argparse import ArgumentParser
     parser = ArgumentParser(description='Endlostafel für das digitale Klassenzimmer. Einfach nur schreiben.')
-    parser.add_argument('--debug',action='store_true',help='Öffnet ein Log-Window mit Debug-Meldungen.')
-    parser.add_argument('--show',help='Wie soll die Tafel geöffnet werden (default: maximized)? normal, fullscreen, maximized')
-    parser.add_argument('--rubbervalue',type=float,help='Ab welcher Größe des TouchPoints soll auf Radieren umgeschaltet werden?')
-    parser.add_argument('--rubberfactor',type=float,help='Wie soll der Radiergummi skaliert werden?')
+    parser.add_argument('--logging',choices=['debug','info','warning','error','critical'],help='Öffnet ein Log-Window mit Debug-Meldungen.')
+    parser.add_argument('--show',choices=['normal','fullscreen','maximized'],help='Gint an, wie die Tafel geöffnet werden soll.')
+    parser.add_argument('--rubbervalue',type=float,help='Gibt die Größe des TouchPoints, bei der auf Radieren umgeschaltet werden soll.')
+    parser.add_argument('--rubberfactor',type=float,help='Gibt eine Skalierung zwischen Touchpointgröße und Radiergummigröße an.')
     options=vars(parser.parse_args())
 
     QLocale.setDefault(QLocale.German)
@@ -560,7 +563,6 @@ if __name__ == "__main__":
     app.setStyle('Fusion')
     app.setWindowIcon(getIconSvg('oszli'))
     app.setApplicationDisplayName('Endlostafel')
-    #app.setAttribute(Qt.AA_SynthesizeMouseForUnhandledTouchEvents, False)
 
     settings = QSettings('hoffmann', 'endlostafel')
     if options['show']:
@@ -578,11 +580,14 @@ if __name__ == "__main__":
     if not settings.value('editor/rubberfactor'):
         settings.setValue('editor/rubberfactor', 0.002)
 
-    d = Editor(settings, options['debug'])
-    logger = logging.getLogger('GUI')
+    d = Editor(settings, options['logging'])
     handler = LogWindowHandler(d.logwindow)
+
+    logger = logging.getLogger('GUI')
+    if options['logging']:
+        logger.setLevel(options['logging'].upper())
     logger.addHandler(handler)
-    logger.setLevel(logging.DEBUG if options['debug'] else logging.INFO)
+    logger.info(f"Starte Endlostafel Version {VERSION}")
 
     if showmode == 'normal':
         d.resize(800,600)

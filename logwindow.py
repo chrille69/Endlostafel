@@ -14,6 +14,8 @@ class LogWindow(QDialog):
     def __init__(self, parent: QWidget | None = ...) -> None:
         super().__init__(parent)
         self._text_edit = QTextEdit(self)
+        self._text_edit.setLineWrapMode(QTextEdit.NoWrap)
+        self._text_edit.setReadOnly(True)
         layout = QGridLayout()
         layout.addWidget(self._text_edit)
         self.setLayout(layout)
