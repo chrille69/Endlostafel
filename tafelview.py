@@ -319,7 +319,7 @@ class Tafelview(QGraphicsView):
     def touchPointSize(self, point):
         ellipse = point.ellipseDiameters()
         area = ellipse.height()**2 + ellipse.width()**2
-        logger.debug(f"Pointsize: {ellipse}, Fläche={area}")
+        logger.info(f"Pointsize: {ellipse}, Fläche={area}")
         return area
     
     def isBigPoint(self, point) -> True:
