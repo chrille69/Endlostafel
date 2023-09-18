@@ -58,39 +58,34 @@ class Editor(QMainWindow):
     linienpapierClicked = Signal()
 
 
-    def __init__(self, settings: QSettings, logwindow):
+    def __init__(self, settings: QSettings, debug=False):
         super().__init__()
         QApplication.instance().applicationStateChanged.connect(self.lateInit)
-
-        self._logwindow = logwindow
         self._settings = settings
+        self._debug = debug
+        self.logwindow = LogWindow(self)
         self._ungespeichert = False
         uhr = Uhr(self)
 
         isdarkmode = False if self._settings.value("editor/darkmode", False) == 'false' else True
         QApplication.setPalette(paletteDark if isdarkmode else paletteLight)
 
-        # Das wichtigste: Die QGraphicsView
-        self._tafelview = Tafelview(self)
-        self.setCentralWidget(self._tafelview)
-
         # Die Statusleiste wird gebastelt
         self._speicherlabel = QLabel()
         self.statusBar().addWidget(uhr)
         self.statusBar().addPermanentWidget(self._speicherlabel)
         self.statusBar().addPermanentWidget(QLabel(f'Version {VERSION} '))
-        self.displayMemoryUsage()
 
         # keine Kontextmenüs
         self.setContextMenuPolicy(Qt.NoContextMenu)
 
         # Actions erzeugen
-        actC1 = Action( 'foreground', 'Normal', self, iscolor=True)
+        self._actC1 = Action( 'foreground', 'Normal', self, iscolor=True)
         actC2 = Action(  'royalblue',   'Blau', self, iscolor=True)
         actC3 = Action(        'red',    'Rot', self, iscolor=True)
         actC4 = Action(      'green',   'Grün', self, iscolor=True)
         self._coloractions = {
-            actC1: 'foreground',
+            self._actC1: 'foreground',
             actC2:  'royalblue',
             actC3:        'red',
             actC4:      'green',
@@ -102,12 +97,12 @@ class Editor(QMainWindow):
         actCbel.triggered.connect(self.customcolor)
         self._colorgroup.addAction(actCbel)
 
-        actP1 = Action( 'pensize-1px',  '1px', self)
+        self._actP1 = Action( 'pensize-1px',  '1px', self)
         actP2 = Action( 'pensize-3px',  '3px', self)
         actP3 = Action( 'pensize-5px', '10px', self)
         actP4 = Action('pensize-20px', '20px', self)
         self._pensizeactions = {
-            actP1:  1,
+            self._actP1:  1,
             actP2:  3,
             actP3:  5,
             actP4: 20,
@@ -115,7 +110,7 @@ class Editor(QMainWindow):
         self._pensizegroup = QActionGroup(self)
         self.configureActionDict(self._pensizeactions, self._pensizegroup, self.pensizeChanged.emit)
 
-        actFreihand  = Action(    'stift',              'Freihand', self)
+        self._actFreihand  = Action(    'stift',              'Freihand', self)
         actLinie     = Action(    'linie',          'Gerade Linie', self)
         actPfeil     = Action(    'pfeil',                 'Pfeil', self)
         actLinieS    = Action(   'linies','Gerade Linie (hor/ver)', self)
@@ -131,7 +126,7 @@ class Editor(QMainWindow):
         actRubber    = Action( 'radierer',              'Radieren', self)
         actEdit      = Action(     'edit',     'Objekte editieren', self)
         self._statusactions = {
-            actFreihand:  Tafelview.statusFreihand,
+            self._actFreihand:  Tafelview.statusFreihand,
             actLinie:     Tafelview.statusLinie,
             actPfeil:     Tafelview.statusPfeil,
             actLinieS:    Tafelview.statusLinieS,
@@ -170,9 +165,9 @@ class Editor(QMainWindow):
 
         mmPapierDialog = MmLogDialog()
         mmPapierAction = Action('logpapier', 'mm/log-Papier', self)
-        karopapierAction = Action('karopapier', 'kariertes Papier', self)
-        linienpapierAction = Action('linienpapier', 'liniertes Papier', self)
-        vordruckActions = ActionWidget(self, mmPapierAction, karopapierAction, linienpapierAction)
+        self._karopapierAction = Action('karopapier', 'kariertes Papier', self)
+        self._linienpapierAction = Action('linienpapier', 'liniertes Papier', self)
+        vordruckActions = ActionWidget(self, mmPapierAction, self._karopapierAction, self._linienpapierAction)
         vordruckActions.setPopupMode(QToolButton.InstantPopup)
 
         geodreieckAction.setCheckable(True)
@@ -204,20 +199,20 @@ class Editor(QMainWindow):
         toolframe.addAction(geodreieckAction)
         toolframe.addSeparator()
 
-        toolframe.addAction(actC1)
+        toolframe.addAction(self._actC1)
         toolframe.addAction(actC2)
         toolframe.addAction(actC3)
         toolframe.addAction(actC4)
         toolframe.addAction(actCbel)
         toolframe.addSeparator()
 
-        toolframe.addAction(actP1)
+        toolframe.addAction(self._actP1)
         toolframe.addAction(actP2)
         toolframe.addAction(actP3)
         toolframe.addAction(actP4)
         toolframe.addSeparator()
 
-        toolframe.addAction(actFreihand)
+        toolframe.addAction(self._actFreihand)
         toolframe.addAction(linesTool)
         toolframe.addAction(pfeileTool)
         toolframe.addAction(formsTool)
@@ -248,9 +243,6 @@ class Editor(QMainWindow):
         toolframe.addWidget(right_spacer)
         toolframe.addAction(helpAction)
 
-        # Zu den Signals verbinden
-        self._tafelview.eswurdegemalt.connect(self.tafelHatGemalt)
-        self._tafelview.statusbarinfo.connect(self.statusbarinfo)
 
         self._deleteAction.triggered.connect(self.deleteClicked.emit)
         self._copyAction.triggered.connect(self.copyClicked.emit)
@@ -270,35 +262,49 @@ class Editor(QMainWindow):
         self._darkmodeAction.triggered.connect(lambda: QApplication.instance().setPalette(paletteDark if self._darkmodeAction.isChecked() else paletteLight))
         mmPapierAction.triggered.connect(lambda: mmPapierDialog.exec())
         mmPapierDialog.mmPapierCreated.connect(self.newItemCreated.emit)
-        karopapierAction.triggered.connect(lambda: self.newItemCreated.emit(Karopapier(self._tafelview)))
-        linienpapierAction.triggered.connect(lambda: self.newItemCreated.emit(Linienpapier(self._tafelview)))
         clipboardPasteAction.triggered.connect(self.importClipboard)
 
-        # Trigger den Standard-Status freihand
-        actFreihand.trigger()
+    def initView(self):
+        # Das wichtigste: Die QGraphicsView
+        self._tafelview = Tafelview(self)
+        self.setCentralWidget(self._tafelview)
 
-        # Trigger die Standard-Farbe und Standard Pensize
+        # Zu den Signals verbinden
+        self._tafelview.eswurdegemalt.connect(self.tafelHatGemalt)
+        self._tafelview.statusbarinfo.connect(self.statusbarinfo)
+        self._karopapierAction.triggered.connect(lambda: self.newItemCreated.emit(Karopapier(self._tafelview)))
+        self._linienpapierAction.triggered.connect(lambda: self.newItemCreated.emit(Linienpapier(self._tafelview)))
+        self.displayMemoryUsage()
+        
+        # Trigger den Standard-Status freihand
+        self._actFreihand.trigger()
+
+        # Trigger die Standard-Farbe
         colorstr = self._settings.value('editor/colorstr', 'Normal')
         coloraction = [act for act in self._coloractions if act.text() == colorstr]
         if coloraction:
             coloraction.pop().trigger()
         else:
-            actC1.trigger()
+            self._actC1.trigger()
 
+        # Trigger die Standard Pensize
         pensize = self._settings.value('editor/pensize', '3px')
         pensizeaction = [act for act in self._pensizeactions if act.text() == pensize]
         if pensizeaction:
             pensizeaction.pop().trigger()
         else:
-            actP1.trigger()
+            self._actP1.trigger()
+
 
     def lateInit(self, appstate: Qt.ApplicationState):
         'Einige Dinge können erst nach dem aktivieren des Fenster eingestellt werden (z.B. viewport)'
         if appstate == Qt.ApplicationActive:
+            if self._debug:
+                self.logwindow.show()
+            self.initView()
             self._fullscreenAction.setChecked(self.isFullScreen())
             self._tafelview.setSceneRectFromViewport()
             QApplication.instance().applicationStateChanged.disconnect()
-            self._logwindow.show()
 
 
     def event(self, ev: QEvent):
@@ -577,15 +583,14 @@ if __name__ == "__main__":
     if not settings.value('editor/rubberfactor'):
         settings.setValue('editor/rubberfactor', 0.002)
 
-    logwindow = LogWindow()
-    handler = LogWindowHandler(logwindow)
     logger = logging.getLogger('GUI')
+    d = Editor(settings, options['logging'])
+    handler = LogWindowHandler(d.logwindow)
+
     if options['logging']:
         logger.setLevel(options['logging'].upper())
     logger.addHandler(handler)
     logger.info(f"Starte Endlostafel Version {VERSION}")
-
-    d = Editor(settings, logwindow)
 
     if showmode == 'normal':
         d.resize(800,600)
