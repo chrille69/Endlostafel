@@ -77,7 +77,7 @@ class Pfad(QGraphicsPathItem):
             clonepfad.setShape(self._shape)
         return clonepfad
 
-    def removeElements(self, ellipse: QGraphicsEllipseItem):
+    def removeElements(self, ellipse: QPainterPath):
         neupfad = QPainterPath()
         if self.brush() != Qt.NoBrush:
             # Gefüllte Elemente werden gelöscht.
@@ -89,7 +89,7 @@ class Pfad(QGraphicsPathItem):
             for i in range(anzahl):
                 element = self.path().elementAt(i)
                 pos = QPointF(element.x, element.y)
-                if ellipse.shape().contains(self.mapToScene(pos)) and element.type != QPainterPath.CurveToDataElement:
+                if ellipse.contains(self.mapToScene(pos)) and element.type != QPainterPath.CurveToDataElement:
                     # Dieser Punkt wird nicht gezeichnet
                     geschnitten = True
                 else:

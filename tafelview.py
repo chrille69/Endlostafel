@@ -19,11 +19,12 @@ import logging
 from PySide6 import QtCore
 from PySide6.QtCore import QEvent, QPointF, QRect, QRectF, QSizeF, Qt, Signal
 from PySide6.QtGui import QBrush, QColor, QPainter, QPalette, QPen, QResizeEvent, QTransform
-from PySide6.QtWidgets import QApplication, QGraphicsEllipseItem, QGraphicsItem, QGraphicsScene, QGraphicsView, QMessageBox, QToolButton, QWidget, QGestureEvent, QPinchGesture, QPanGesture
+from PySide6.QtWidgets import QApplication, QGraphicsEllipseItem, QGraphicsRectItem, QGraphicsItem, QGraphicsScene, QGraphicsView, QMessageBox, QToolButton, QWidget, QGestureEvent, QPinchGesture, QPanGesture
 
 from icons import getNameCursor, getIconSvg
 from items import Ellipse, Kreis, Line, LineSnap, Pfad, Pfeil, PfeilSnap, Punkt, Quadrat, Rechteck, Stift
 from geodreieck import Geodreieck
+from radiergummi import Radiergummi
 
 logger = logging.getLogger('GUI')
 
@@ -75,14 +76,15 @@ class Tafelview(QGraphicsView):
         self._currentItem: Pfad = None
         self._redoitems = []
         self._lastPos: QPointF = None
-        self._tmpRadierdurchmesser = None
         self._drawpen = QPen(qcolor, pensize, Qt.SolidLine, c=Qt.RoundCap, j=Qt.RoundJoin)
         self._drawpen.setCosmetic(True)
         self._drawbrush = Qt.NoBrush
         self._arrowbrush = QBrush(QColor(qcolor))
         self._arrowpen = QPen(self._drawpen)
         self._arrowpen.setJoinStyle(Qt.MiterJoin)
+        self._radiergummi: Radiergummi = None
         self._radierdurchmesser = pensize*10
+        self._tmpRadierdurchmesser = None
         self._currentpen: QPen = None
         self._currentbrush: QBrush = None
         self._totalTransform = self.transform()
@@ -188,7 +190,7 @@ class Tafelview(QGraphicsView):
 
     def setCustomCursor(self):
         if self._status == Tafelview.statusRadiere:
-            cursor = getNameCursor('ereaser', self._radierdurchmesser)
+            cursor = getNameCursor('ereaser', self._radierdurchmesser, self._radierdurchmesser)
         else:
             cursor = self._status2cursor[self._status]
         self.viewport().setCursor(cursor)
@@ -319,7 +321,7 @@ class Tafelview(QGraphicsView):
     def touchPointSize(self, point):
         ellipse = point.ellipseDiameters()
         area = ellipse.height()**2 + ellipse.width()**2
-        logger.info(f"Pointsize: {ellipse}, Fläche={area}")
+        #logger.info(f"Pointsize: {ellipse}, Fläche={area}")
         return area
     
     def isBigPoint(self, point) -> True:
@@ -330,82 +332,89 @@ class Tafelview(QGraphicsView):
         yscale = self.transform().m22()
         self.translate(dpoint.x()/xscale, dpoint.y()/yscale)
 
+    def aktiviereRadiergummi(self, width, height, pos):
+        self._tmpStatus = self._status
+        self._radiergummi = Radiergummi(self, width/self.transform().m11(), height/self.transform().m22(), pos)
+        self.scene().addItem(self._radiergummi)
+        self.setStatus(Tafelview.statusRadiere)
+
+    def deaktiviereRadiergummi(self):
+        self.setStatus(self._tmpStatus)
+        self._tmpStatus = None
+        self.scene().removeItem(self._radiergummi)
+        self._radiergummi = None
+
     def viewportEvent(self, event: QtCore.QEvent) -> bool:
         
-        logger.debug(event.type())
-        if self._status == Tafelview.statusEdit:
-            return super().viewportEvent(event)
+        try:
+            if self._status == Tafelview.statusEdit:
+                return super().viewportEvent(event)
 
-        eventtype = event.type()
-        if eventtype == QEvent.Gesture:
-            gesture = event.gesture(Qt.PinchGesture)
-            if gesture:
-                if gesture.state() == Qt.GestureUpdated:
-                    self._gestureActive = True
-                    dpoint = gesture.centerPoint() - gesture.lastCenterPoint()
-                    self.verschiebeLeinwand(dpoint)
-            return True
-
-        elif eventtype == QEvent.TouchBegin:
-            if self._gestureActive:
-                return False
-            if self.isBigPoint(event.points()[0]):
-                if not self._tmpStatus:
-                    self._tmpStatus = self._status
-                    self._tmpRadierdurchmesser = self._radierdurchmesser
-                    self._radierdurchmesser = self.touchPointSize(event.points()[0])*self._rubberfactor
-                    self.setStatus(Tafelview.statusRadiere)
-            self.bearbeitenStart(self.scenePosFromEvent(event))
-            return True
-            
-        elif eventtype == QEvent.TouchUpdate:
-            if self._gestureActive:
-                return False
-            if event.pointCount() > 1:
-                self.deleteCurrentItem()
-                return False
-            if self.isBigPoint(event.points()[0]):
-                if not self._tmpStatus:
-                    self._tmpStatus = self._status
-                    self._tmpRadierdurchmesser = self._radierdurchmesser
-                    self._radierdurchmesser = self.touchPointSize(event.points()[0])*self._rubberfactor
-                    self.setStatus(Tafelview.statusRadiere)
-            self.bearbeitenWeiter(self.scenePosFromEvent(event))
-            return True
-        
-        elif eventtype in [QEvent.TouchCancel,QEvent.TouchEnd]:
-            self._gestureActive = False
-            self.bearbeitenFertig(self.scenePosFromEvent(event))
-            if self._tmpStatus:
-                self.setStatus(self._tmpStatus)
-                self._radierdurchmesser = self._tmpRadierdurchmesser
-                self._tmpStatus = None
-            return True
-
-        elif eventtype == QEvent.MouseButtonPress:
-            if event.source() == Qt.MouseEventSynthesizedBySystem:
-                return False
-            self.bearbeitenStart(self.scenePosFromEvent(event))
-            return True
-
-        elif eventtype == QEvent.MouseMove:
-            if event.source() == Qt.MouseEventSynthesizedBySystem:
-                return False
-            if event.buttons() == Qt.NoButton:
+            eventtype = event.type()
+            if eventtype == QEvent.Gesture:
+                gesture = event.gesture(Qt.PinchGesture)
+                if gesture:
+                    if gesture.state() == Qt.GestureUpdated:
+                        self._gestureActive = True
+                        dpoint = gesture.centerPoint() - gesture.lastCenterPoint()
+                        self.verschiebeLeinwand(dpoint)
                 return True
-            self.bearbeitenWeiter(self.scenePosFromEvent(event))
-            return True
-        
-        elif eventtype == QEvent.MouseButtonRelease:
-            if event.source() == Qt.MouseEventSynthesizedBySystem:
+
+            elif eventtype == QEvent.TouchBegin:
+                if self._gestureActive:
+                    return False
+                if self.isBigPoint(event.points()[0]):
+                    if not self._tmpStatus:
+                        self.aktiviereRadiergummi(20, 40, self.scenePosFromEvent(event))
+                self.bearbeitenStart(self.scenePosFromEvent(event))
+                return True
+
+            elif eventtype == QEvent.TouchUpdate:
+                if self._gestureActive:
+                    return False
+                if event.pointCount() > 1:
+                    self.deleteCurrentItem()
+                    return False
+                if self.isBigPoint(event.points()[0]):
+                    if not self._tmpStatus:
+                        self.aktiviereRadiergummi(20, 40, self.scenePosFromEvent(event))
+                self.bearbeitenWeiter(self.scenePosFromEvent(event))
+                return True
+
+            elif eventtype in [QEvent.TouchCancel,QEvent.TouchEnd]:
+                self._gestureActive = False
+                self.bearbeitenFertig(self.scenePosFromEvent(event))
+                if self._tmpStatus:
+                    self.deaktiviereRadiergummi()
+                return True
+
+            elif eventtype == QEvent.MouseButtonPress:
+                if event.source() == Qt.MouseEventSynthesizedBySystem:
+                    return False
+                self.bearbeitenStart(self.scenePosFromEvent(event))
+                return True
+
+            elif eventtype == QEvent.MouseMove:
+                if event.source() == Qt.MouseEventSynthesizedBySystem:
+                    return False
+                if event.buttons() == Qt.NoButton:
+                    return True
+                self.bearbeitenWeiter(self.scenePosFromEvent(event))
+                return True
+
+            elif eventtype == QEvent.MouseButtonRelease:
+                if event.source() == Qt.MouseEventSynthesizedBySystem:
+                    return False
+                self.bearbeitenFertig(self.scenePosFromEvent(event))
+                return True
+
+            elif eventtype == QEvent.MouseButtonDblClick:
                 return False
-            self.bearbeitenFertig(self.scenePosFromEvent(event))
-            return True
-
-        elif eventtype == QEvent.MouseButtonDblClick:
-            return False
-
-        return super().viewportEvent(event)
+            
+            return super().viewportEvent(event)
+        
+        except Exception as e:
+            logger.exception(e, exc_info=True)
 
     def snapToGeodreieck(self, pos):
         if self._geodreieck.scene() != self.scene():
@@ -418,11 +427,15 @@ class Tafelview(QGraphicsView):
         return self._geodreieck.mapToScene(posGeo)
     
     def radiere(self, pos):
-        durchmesser = self._radierdurchmesser/self.transform().m11()
-        ellipse = QGraphicsEllipseItem(QRectF(pos-QPointF(durchmesser/2,durchmesser/2),QSizeF(durchmesser,durchmesser)))
-        for item in self.scene().items(ellipse.shape()):
+        if self._radiergummi:
+            self._radiergummi.setPos(pos)
+            radierpath = QGraphicsRectItem(self._radiergummi.sceneBoundingRect()).shape()
+        else:
+            durchmesser = self._radierdurchmesser/self.transform().m11()
+            radierpath = QGraphicsRectItem(QRectF(pos-QPointF(durchmesser/2,durchmesser/2),QSizeF(durchmesser,durchmesser))).shape()
+        for item in self.scene().items(radierpath):
             if hasattr(item,'removeElements') and callable(item.removeElements):
-                item.removeElements(ellipse)
+                item.removeElements(radierpath)
             if hasattr(item,'path') and callable(item.path) and item.path().elementCount() < 2:
                 self.scene().removeItem(item)
 

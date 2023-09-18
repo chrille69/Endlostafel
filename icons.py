@@ -43,7 +43,7 @@ def getImageSvg(name, status=QIcon.Normal):
     painter.end()
     return img
 
-def getNameCursor(name, height: float=32):
+def getNameCursor(name, height: float=32, width: float=32):
     name2hotspot = {
         'stift'    : [0, 32],
         'linie'    : [5, 5],
@@ -67,7 +67,7 @@ def getNameCursor(name, height: float=32):
         name, x, y = 'help', -1, -1 # Fragezeichen als SVG-String
 
     img = getImageSvg(name)
-    return QCursor(QPixmap(img.scaledToHeight(height)), x, y)
+    return QCursor(QPixmap(img.scaledToHeight(height).scaledToWidth(width)), x, y)
 
 def getIconColor(qcolor: QColor):
     pixmap=QPixmap(32,32)
@@ -183,6 +183,10 @@ iconssvg = {
             <path style="fill:{htmlcolor}" d="m7.9824 3a7 5 0 00-6.9824 5 7 5 0 007 5 7 5 0 007-5 7 5 0 00-7-5 7 5 0 00-.017578 0zm-1.6289 2.6465 1.6465 1.6465 1.6465-1.6465.70703.70703-1.6465 1.6465 1.6465 1.6465-.70703.70703-1.6465-1.6465-1.6465 1.6465-.70703-.70703 1.6465-1.6465-1.6465-1.6465.70703-.70703z"/>
         </svg>''',
     'ereaser': '''
+        <svg width="13.652" height="13.679" version="1.1" xmlns="http://www.w3.org/2000/svg">
+            <rect x=".32455" y=".33192" width="13.004" height="13.019" ry="0" style="fill:none;stroke-dasharray:2.4738, 0.651;stroke-width:.651;stroke:{htmlcolor}"/>
+        </svg>''',
+    'ereaser2': '''
         <svg width="13.652" height="13.679" version="1.1" xmlns="http://www.w3.org/2000/svg">
             <path style="fill:none;stroke-dasharray:2.60539, 1.3027;stroke-width:.65135;stroke:{htmlcolor}" d="m6.8132.32568c3.5973 0 6.5135 2.9162 6.5135 6.5135s-2.9162 6.5135-6.5135 6.5135c-3.5973 0-6.5135-2.9162-6.5135-6.5135s2.9162-6.5135 6.5135-6.5135z"/>
         </svg>''',
