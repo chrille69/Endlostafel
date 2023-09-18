@@ -43,7 +43,7 @@ def getImageSvg(name, status=QIcon.Normal):
     painter.end()
     return img
 
-def getNameCursor(name, height: float=32, width: float=32):
+def getNameCursor(name, width: float=32):
     name2hotspot = {
         'stift'    : [0, 32],
         'linie'    : [5, 5],
@@ -67,7 +67,7 @@ def getNameCursor(name, height: float=32, width: float=32):
         name, x, y = 'help', -1, -1 # Fragezeichen als SVG-String
 
     img = getImageSvg(name)
-    return QCursor(QPixmap(img.scaledToHeight(height).scaledToWidth(width)), x, y)
+    return QCursor(QPixmap(img.scaledToWidth(width)), x, y)
 
 def getIconColor(qcolor: QColor):
     pixmap=QPixmap(32,32)

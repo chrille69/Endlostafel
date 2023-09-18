@@ -190,7 +190,7 @@ class Tafelview(QGraphicsView):
 
     def setCustomCursor(self):
         if self._status == Tafelview.statusRadiere:
-            cursor = getNameCursor('ereaser', self._radierdurchmesser, self._radierdurchmesser)
+            cursor = getNameCursor('ereaser', self._radierdurchmesser)
         else:
             cursor = self._status2cursor[self._status]
         self.viewport().setCursor(cursor)
