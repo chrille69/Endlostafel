@@ -58,14 +58,12 @@ class Editor(QMainWindow):
     linienpapierClicked = Signal()
 
 
-    def __init__(self, settings: QSettings, debug=False):
+    def __init__(self, settings: QSettings, logwindow):
         super().__init__()
         QApplication.instance().applicationStateChanged.connect(self.lateInit)
 
-        self.logwindow = LogWindow(self)
-
+        self._logwindow = logwindow
         self._settings = settings
-        self._debug = debug
         self._ungespeichert = False
         uhr = Uhr(self)
 
@@ -300,8 +298,7 @@ class Editor(QMainWindow):
             self._fullscreenAction.setChecked(self.isFullScreen())
             self._tafelview.setSceneRectFromViewport()
             QApplication.instance().applicationStateChanged.disconnect()
-            if self._debug:
-                self.logwindow.show()
+            self._logwindow.show()
 
 
     def event(self, ev: QEvent):
@@ -580,14 +577,15 @@ if __name__ == "__main__":
     if not settings.value('editor/rubberfactor'):
         settings.setValue('editor/rubberfactor', 0.002)
 
-    d = Editor(settings, options['logging'])
-    handler = LogWindowHandler(d.logwindow)
-
+    logwindow = LogWindow()
+    handler = LogWindowHandler(logwindow)
     logger = logging.getLogger('GUI')
     if options['logging']:
         logger.setLevel(options['logging'].upper())
     logger.addHandler(handler)
     logger.info(f"Starte Endlostafel Version {VERSION}")
+
+    d = Editor(settings, logwindow)
 
     if showmode == 'normal':
         d.resize(800,600)

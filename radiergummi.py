@@ -21,6 +21,8 @@ from PySide6.QtCore import QEvent, QPointF, QRect, QRectF, QSizeF, Qt, Signal
 from PySide6.QtGui import QBrush, QColor, QPainter, QPalette, QPen, QResizeEvent, QTransform
 from PySide6.QtWidgets import QApplication, QGraphicsEllipseItem, QGraphicsRectItem, QGraphicsItem, QGraphicsScene, QGraphicsView, QMessageBox, QToolButton, QWidget, QGestureEvent, QPinchGesture, QPanGesture
 
+logger = logging.getLogger('GUI')
+
 class Radiergummi(QGraphicsRectItem):
     def __init__(self, view: QGraphicsView, width: float, height: float, pos: QPointF = QPointF(0,0)):
         super().__init__()
@@ -33,6 +35,8 @@ class Radiergummi(QGraphicsRectItem):
         pen.setDashPattern([2,2])
         pen.setDashOffset(7)
         self.setPen(pen)
+        if logger.isEnabledFor(logging.DEBUG):
+            logger.debug('Radiergummi erzeugt.')
 
     def setSize(self, width: float, height: float):
         self.setRect(QRectF(-width/2, -height/2, width, height))

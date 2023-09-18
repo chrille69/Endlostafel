@@ -11,8 +11,8 @@ class LogWindowHandler(logging.Handler):
         self._logwindow.append(self.format(record))
 
 class LogWindow(QDialog):
-    def __init__(self, parent: QWidget | None = ...) -> None:
-        super().__init__(parent)
+    def __init__(self) -> None:
+        super().__init__()
         self._text_edit = QTextEdit(self)
         self._text_edit.setLineWrapMode(QTextEdit.NoWrap)
         self._text_edit.setReadOnly(True)
