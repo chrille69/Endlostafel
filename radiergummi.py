@@ -30,6 +30,8 @@ class Radiergummi(QGraphicsRectItem):
 
         color = QApplication.instance().palette().color(QPalette.PlaceholderText)
         pen = QPen(color, 3, Qt.DashLine, c=Qt.RoundCap, j=Qt.RoundJoin)
+        pen.setDashPattern([2,2])
+        pen.setDashOffset(7)
         self.setPen(pen)
 
     def setSize(self, width: float, height: float):

@@ -15,10 +15,10 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see https://www.gnu.org/licenses/.
 
-from PySide6.QtCore import QByteArray
+from PySide6.QtCore import QByteArray, QPointF
 from PySide6.QtGui import QColor, QCursor, QImage, QPainter, QPalette, QPixmap, QIcon
 from PySide6.QtSvg import QSvgRenderer
-from PySide6.QtWidgets import QApplication
+from PySide6.QtWidgets import QApplication, QGraphicsItem, QStyleOptionGraphicsItem
 
 def getImageSvg(name, status=QIcon.Normal):
 
@@ -42,6 +42,17 @@ def getImageSvg(name, status=QIcon.Normal):
     svg.render(painter)
     painter.end()
     return img
+
+def getItemCursor(item: QGraphicsItem, hotx, hoty):
+
+    img = QImage(item.boundingRect().size().toSize(), QImage.Format_ARGB32)
+    img.fill(0)
+    painter = QPainter()
+    painter.begin(img)
+    painter.translate(-item.boundingRect().topLeft())
+    item.paint(painter, QStyleOptionGraphicsItem())
+    painter.end()
+    return QCursor(QPixmap(img), hotx, hoty)
 
 def getNameCursor(name, width: float=32):
     name2hotspot = {

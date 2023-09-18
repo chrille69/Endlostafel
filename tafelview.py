@@ -21,7 +21,7 @@ from PySide6.QtCore import QEvent, QPointF, QRect, QRectF, QSizeF, Qt, Signal
 from PySide6.QtGui import QBrush, QColor, QPainter, QPalette, QPen, QResizeEvent, QTransform
 from PySide6.QtWidgets import QApplication, QGraphicsEllipseItem, QGraphicsRectItem, QGraphicsItem, QGraphicsScene, QGraphicsView, QMessageBox, QToolButton, QWidget, QGestureEvent, QPinchGesture, QPanGesture
 
-from icons import getNameCursor, getIconSvg
+from icons import getNameCursor, getIconSvg, getItemCursor
 from items import Ellipse, Kreis, Line, LineSnap, Pfad, Pfeil, PfeilSnap, Punkt, Quadrat, Rechteck, Stift
 from geodreieck import Geodreieck
 from radiergummi import Radiergummi
@@ -82,9 +82,9 @@ class Tafelview(QGraphicsView):
         self._arrowbrush = QBrush(QColor(qcolor))
         self._arrowpen = QPen(self._drawpen)
         self._arrowpen.setJoinStyle(Qt.MiterJoin)
-        self._radiergummi: Radiergummi = None
         self._radierdurchmesser = pensize*10
         self._tmpRadierdurchmesser = None
+        self._radiergummi = Radiergummi(self, self._radierdurchmesser, self._radierdurchmesser, QPointF(0,0))
         self._currentpen: QPen = None
         self._currentbrush: QBrush = None
         self._totalTransform = self.transform()
@@ -164,6 +164,7 @@ class Tafelview(QGraphicsView):
         self._drawpen.setWidthF(pensize)
         self._arrowpen.setWidthF(pensize)
         self._radierdurchmesser = pensize*10
+        self._radiergummi = Radiergummi(self, self._radierdurchmesser, self._radierdurchmesser, QPointF(0,0))
         self.setCustomCursor()
 
     def centerGeodreieck(self):
@@ -190,7 +191,7 @@ class Tafelview(QGraphicsView):
 
     def setCustomCursor(self):
         if self._status == Tafelview.statusRadiere:
-            cursor = getNameCursor('ereaser', self._radierdurchmesser)
+            cursor = getItemCursor(self._radiergummi, -1, -1)
         else:
             cursor = self._status2cursor[self._status]
         self.viewport().setCursor(cursor)
@@ -342,7 +343,7 @@ class Tafelview(QGraphicsView):
         self.setStatus(self._tmpStatus)
         self._tmpStatus = None
         self.scene().removeItem(self._radiergummi)
-        self._radiergummi = None
+        self._radiergummi = Radiergummi(self, self._radierdurchmesser, self._radierdurchmesser, QPointF(0,0))
 
     def viewportEvent(self, event: QtCore.QEvent) -> bool:
         
