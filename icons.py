@@ -205,6 +205,12 @@ iconssvg = {
         <svg width="16" height="16" version="1.1" xmlns="http://www.w3.org/2000/svg">
             <path style="fill:{htmlcolor}" d="m6.8891 16.01 8.8388-8.8388s.70711-.70711 0-1.4142l-4.9497-4.9497c-.70711-.70711-1.4142 0-1.4142 0l-8.8388 8.8388c-.70711.70711-.70711 1.4142 0 2.1213l4.2426 4.2426zm-.70711-2.1213h-.70711l-2.4749-2.4749c-.70711-.70711-.70711-.70711 0-1.4142l4.2426-4.2426 3.5355 3.5355z"/>
         </svg>''',
+    'radierer-kalibrieren': '''
+        <svg width="16" height="16" version="1.1" xmlns="http://www.w3.org/2000/svg">
+            <path d="m5.0409 11.357 6.4693-6.4693s.51754-.51754 0-1.0351l-3.6228-3.6228c-.51754-.51754-1.0351 0-1.0351 0l-6.4693 6.4693c-.51754.51754-.51754 1.0351 0 1.5526l3.1052 3.1052zm-.51754-1.5526h-.51754l-1.8114-1.8114c-.51754-.51754-.51754-.51754 0-1.0351l3.1052-3.1052 2.5877 2.5877z" style="fill:{htmlcolor}"/>
+            <circle cx="11.742" cy="11.935" r="2.2371" style="fill:none;opacity:.992;stroke-width:.651;stroke:{htmlcolor}"/>
+            <circle cx="11.742" cy="11.935" r="2.745" style="fill:none;opacity:.992;stroke-dasharray:0.97650003, 0.74865003;stroke-width:.651;stroke:{htmlcolor}"/>
+        </svg>''',
     'undo': '''
         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" version="1.1">
             <path style="fill:{htmlcolor}" d="M 7,2 2,5 7,8 V 6 H 10 C 11.68,6 13,7.321 13,9 13,10.679 11.68,12 10,12 H 5 V 14 H 10 C 12.75,14 15,11.753 15,9 15,6.247 12.75,4 10,4 H 7 Z"/>

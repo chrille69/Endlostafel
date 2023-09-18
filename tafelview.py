@@ -89,6 +89,9 @@ class Tafelview(QGraphicsView):
         self._currentbrush: QBrush = None
         self._totalTransform = self.transform()
         self._fgcolor = QApplication.instance().palette().color(QPalette.WindowText)
+        self._kalibriere = False
+        self._mittlerePointsize = 1500
+        self._countPointsize = 50
 
         self.setRenderHint(QPainter.Antialiasing)
         self.setTransformationAnchor(QGraphicsView.NoAnchor)
@@ -110,6 +113,7 @@ class Tafelview(QGraphicsView):
         parent.newItemCreated.connect(self.importItem)
         parent.clearClicked.connect(self.clearall)
         parent.paletteChanged.connect(self.newPalette)
+        parent.kalibrierenClicked.connect(self.starteKalibrieren)
 
         self.resized.connect(self.changeSceneRect)
         
@@ -322,11 +326,14 @@ class Tafelview(QGraphicsView):
     def touchPointSize(self, point):
         ellipse = point.ellipseDiameters()
         area = ellipse.height()**2 + ellipse.width()**2
-        #logger.info(f"Pointsize: {ellipse}, Fläche={area}")
+        logger.info(f"Pointsize: {ellipse}, Fläche={area}")
         return area
     
     def isBigPoint(self, point) -> True:
-        return self.touchPointSize(point) > self._rubbervalue
+        return self.touchPointSize(point) > self._mittlerePointsize * 2 and not self._kalibriere
+
+    def isVeryBigPoint(self, point) -> True:
+        return self.touchPointSize(point) > self._mittlerePointsize * 4 and not self._kalibriere
 
     def verschiebeLeinwand(self, dpoint: QPointF):
         xscale = self.transform().m11()
@@ -366,7 +373,10 @@ class Tafelview(QGraphicsView):
                     return False
                 if self.isBigPoint(event.points()[0]):
                     if not self._tmpStatus:
-                        self.aktiviereRadiergummi(20, 40, self.scenePosFromEvent(event))
+                        if self.isVeryBigPoint(event.points()[0]):
+                            self.aktiviereRadiergummi(60, 120, self.scenePosFromEvent(event))
+                        else:
+                            self.aktiviereRadiergummi(30, 60, self.scenePosFromEvent(event))
                 self.bearbeitenStart(self.scenePosFromEvent(event))
                 return True
 
@@ -376,9 +386,13 @@ class Tafelview(QGraphicsView):
                 if event.pointCount() > 1:
                     self.deleteCurrentItem()
                     return False
+                self.kalibrierePointSize(event.points()[0])
                 if self.isBigPoint(event.points()[0]):
                     if not self._tmpStatus:
-                        self.aktiviereRadiergummi(20, 40, self.scenePosFromEvent(event))
+                        if self.isVeryBigPoint(event.points()[0]):
+                            self.aktiviereRadiergummi(60, 120, self.scenePosFromEvent(event))
+                        else:
+                            self.aktiviereRadiergummi(30, 60, self.scenePosFromEvent(event))
                 self.bearbeitenWeiter(self.scenePosFromEvent(event))
                 return True
 
@@ -416,6 +430,21 @@ class Tafelview(QGraphicsView):
         
         except Exception as e:
             logger.exception(e, exc_info=True)
+
+    def starteKalibrieren(self):
+        logger.debug('Kalibriere')
+        self._kalibriere = True
+        self._countPointsize = 0
+        self._mittlerePointsize = 0
+    
+    def kalibrierePointSize(self, point):
+        if self._kalibriere:
+            if self._countPointsize < 50:
+                self._mittlerePointsize = (self._countPointsize * self._mittlerePointsize + self.touchPointSize(point)) / (self._countPointsize+1)
+                self._countPointsize += 1
+                logger.debug(self._mittlerePointsize)
+            else:
+                self._kalibriere = False
 
     def snapToGeodreieck(self, pos):
         if self._geodreieck.scene() != self.scene():

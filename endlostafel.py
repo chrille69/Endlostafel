@@ -56,6 +56,7 @@ class Editor(QMainWindow):
     paletteChanged = Signal()
     karopapierClicked = Signal()
     linienpapierClicked = Signal()
+    kalibrierenClicked = Signal()
 
 
     def __init__(self, settings: QSettings, debug=False):
@@ -162,6 +163,7 @@ class Editor(QMainWindow):
         helpAction             = Action(         'help', 'Hilfe/Info', self)
         self._darkmodeAction   = Action(         'dark', 'Dunkelmodus', self)
         clipboardPasteAction   = Action('fromclipboard', 'Zwischenablage einfügen', self)
+        kalibrierenAction      = Action('radierer-kalibrieren', 'Radierer kalibrieren', self)
 
         mmPapierDialog = MmLogDialog()
         mmPapierAction = Action('logpapier', 'mm/log-Papier', self)
@@ -241,6 +243,7 @@ class Editor(QMainWindow):
 
         toolframe.addAction(clearAction)
         toolframe.addWidget(right_spacer)
+        toolframe.addAction(kalibrierenAction)
         toolframe.addAction(helpAction)
 
 
@@ -263,6 +266,7 @@ class Editor(QMainWindow):
         mmPapierAction.triggered.connect(lambda: mmPapierDialog.exec())
         mmPapierDialog.mmPapierCreated.connect(self.newItemCreated.emit)
         clipboardPasteAction.triggered.connect(self.importClipboard)
+        kalibrierenAction.triggered.connect(self.kalibrierenClicked)
 
     def initView(self):
         # Das wichtigste: Die QGraphicsView
