@@ -96,6 +96,8 @@ class Tafelview(QGraphicsView):
         self._kalibriere = False
         self._mittlerePointsize = parent.getKalibriert()
         self._countPointsize = 50
+        self._bigpointfactor = parent.getBigPointFactor()
+        self._verybigpointfactor = parent.getVeryBigPointFactor()
 
         self.setRenderHint(QPainter.Antialiasing)
         self.setTransformationAnchor(QGraphicsView.NoAnchor)
@@ -332,10 +334,10 @@ class Tafelview(QGraphicsView):
         return area
     
     def isBigPoint(self, point) -> True:
-        return self.touchPointSize(point) > self._mittlerePointsize * 2 and not self._kalibriere
+        return self.touchPointSize(point) > self._mittlerePointsize * self._bigpointfactor and not self._kalibriere
 
     def isVeryBigPoint(self, point) -> True:
-        return self.touchPointSize(point) > self._mittlerePointsize * 4 and not self._kalibriere
+        return self.touchPointSize(point) > self._mittlerePointsize * self._verybigpointfactor and not self._kalibriere
 
     def verschiebeLeinwand(self, dpoint: QPointF):
         xscale = self.transform().m11()

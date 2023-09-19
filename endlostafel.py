@@ -324,6 +324,12 @@ class Editor(QMainWindow):
     def getKalibriert(self) -> float:
         return float(self._settings.value('editor/kalibriert', 1500))
 
+    def getBigPointFactor(self) -> float:
+        return float(self._settings.value('editor/bigpointfactor', 2))
+
+    def getVeryBigPointFactor(self) -> float:
+        return float(self._settings.value('editor/verybigpointfactor', 4))
+
     def setUngespeichert(self):
         self._ungespeichert = True
 
@@ -409,6 +415,8 @@ class Editor(QMainWindow):
             <tr><td align='right'>Dunkler Modus:&nbsp;</td><td>{self._settings.value('editor/darkmode')}</td></tr>
             <tr><td align='right'>Start der Anwendung:&nbsp;</td><td>{self._settings.value('editor/show')}</td></tr>
             <tr><td align='right'>Kalibrierter Flächeninhalt:&nbsp;</td><td>{self._settings.value('editor/kalibriert')}</td></tr>
+            <tr><td align='right'>BigPointFactor:&nbsp;</td><td>{self._settings.value('editor/bigpointfactor',2)}</td></tr>
+            <tr><td align='right'>VeryBigPointFactor:&nbsp;</td><td>{self._settings.value('editor/verybigpointfactor',4)}</td></tr>
         </table>
         <p>Der Start der Anwendung kann mit der Kommandozeilenoption <code>--show [fullscreen,maximized,normal]</code> gesetzt werden.</p>'''
         QMessageBox.information(self,'Einstellungen speichern',text)
@@ -474,7 +482,9 @@ class Editor(QMainWindow):
             <p>Dieses Programm stellt ein einfaches Schreibwerkzeug für den Frontalunterricht dar.</p>
             <h4>Kommandozeilenoptionen</h4>
             <p><code>--logging [debug,info,warning,error,critical]<br/>
-            --show [fullscreen,maximized,normal]</code></p>
+            --show [fullscreen,maximized,normal]<br/>
+            --bigpointfactor float<br/>
+            --verybigpointfactor float</code></p>
             <p>Startet die Tafel in Vollbild, maximiertem Fenster oder Fenster in Normalgröße. Bei
             einem ungültigen Wert, wird maximized angenommen. Ist diese Option nicht gegeben, wird der Wert
             in den Einstellungen angenommen. Ist der Wert in den Einstellungen nicht gesetzt, wird mit
@@ -558,7 +568,9 @@ if __name__ == "__main__":
     from argparse import ArgumentParser
     parser = ArgumentParser(description='Endlostafel für das digitale Klassenzimmer. Einfach nur schreiben.')
     parser.add_argument('--logging',choices=['debug','info','warning','error','critical'],help='Öffnet ein Log-Window mit Debug-Meldungen.')
-    parser.add_argument('--show',choices=['normal','fullscreen','maximized'],help='Gint an, wie die Tafel geöffnet werden soll.')
+    parser.add_argument('--show',choices=['normal','fullscreen','maximized'],help='Gibt an, wie die Tafel geöffnet werden soll.')
+    parser.add_argument('--bigpointfactor',type=float,help='Größe eines großen Touchpoints gegenüber des kalibrierten Touchpoints.')
+    parser.add_argument('--verybigpointfactor',type=float,help='Größe eines sehr großen Touchpoints gegenüber des kalibrierten Touchpoints.')
     options=vars(parser.parse_args())
 
     QLocale.setDefault(QLocale.German)
@@ -572,6 +584,12 @@ if __name__ == "__main__":
         showmode = options['show']
     else:
         showmode = settings.value('editor/show','maximized')
+
+    if options['bigpointfactor']:
+        settings.setValue('editor/bigpointfactor', options['bigpointfactor'])
+
+    if options['verybigpointfactor']:
+        settings.setValue('editor/verybigpointfactor', options['verybigpointfactor'])
 
     logger = logging.getLogger('GUI')
     d = Editor(settings, options['logging'])
