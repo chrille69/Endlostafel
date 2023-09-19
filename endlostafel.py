@@ -35,7 +35,7 @@ from logwindow import LogWindowHandler, LogWindow
 # Zum Erzeugen der exe:
 # pyinstaller.exe -F -i "oszli-icon.ico" -w endlostafel.py
 
-VERSION='2.10'
+VERSION='2.11'
 
 
 class Editor(QMainWindow):
