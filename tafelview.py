@@ -19,7 +19,7 @@ import logging
 from PySide6 import QtCore
 from PySide6.QtCore import QEvent, QPointF, QRect, QRectF, QSizeF, Qt, Signal
 from PySide6.QtGui import QBrush, QColor, QPainter, QPalette, QPen, QResizeEvent, QTransform
-from PySide6.QtWidgets import QApplication, QGraphicsEllipseItem, QGraphicsRectItem, QGraphicsItem, QGraphicsScene, QGraphicsView, QMessageBox, QToolButton, QWidget, QGestureEvent, QPinchGesture, QPanGesture
+from PySide6.QtWidgets import QApplication, QGraphicsRectItem, QGraphicsItem, QGraphicsScene, QGraphicsView, QMessageBox, QToolButton, QWidget
 
 from icons import getNameCursor, getIconSvg, getItemCursor
 from items import Ellipse, Kreis, Line, LineSnap, Pfad, Pfeil, PfeilSnap, Punkt, Quadrat, Rechteck, Stift
@@ -59,6 +59,9 @@ class Tafelview(QGraphicsView):
         statusKreisF, statusQuadratF, statusEllipseF, statusRechteckF,
         statusEdit, statusRadiere
     ]
+
+    RADIERGUMMISIZESMALL = [30, 60]
+    RADIERGUMMISIZEBIG   = [90, 180]
 
     def __init__(self, parent: QWidget, qcolor: QColor=QColor(Qt.black), pensize: float=3, status: str=statusFreihand):
         super().__init__(parent)
@@ -339,12 +342,21 @@ class Tafelview(QGraphicsView):
         yscale = self.transform().m22()
         self.translate(dpoint.x()/xscale, dpoint.y()/yscale)
 
-    def aktiviereRadiergummi(self, width, height, pos):
+    def aktiviereRadiergummi(self, point, pos):
         self._tmpStatus = self._status
+        width, height = Tafelview.RADIERGUMMISIZESMALL
+        if self.isVeryBigPoint(point):
+            width, height = Tafelview.RADIERGUMMISIZEBIG
         self._radiergummi = Radiergummi(self, width/self.transform().m11(), height/self.transform().m22(), pos)
         self.scene().addItem(self._radiergummi)
         self.setStatus(Tafelview.statusRadiere)
 
+    def resizeRadiergummi(self, point):
+        width, height = Tafelview.RADIERGUMMISIZESMALL
+        if self.isVeryBigPoint(point):
+            width, height = Tafelview.RADIERGUMMISIZEBIG
+        self._radiergummi.setSize(width/self.transform().m11(), height/self.transform().m22())
+    
     def deaktiviereRadiergummi(self):
         self.setStatus(self._tmpStatus)
         self._tmpStatus = None
@@ -372,10 +384,7 @@ class Tafelview(QGraphicsView):
                     return False
                 if self.isBigPoint(event.points()[0]):
                     if not self._tmpStatus:
-                        if self.isVeryBigPoint(event.points()[0]):
-                            self.aktiviereRadiergummi(60, 120, self.scenePosFromEvent(event))
-                        else:
-                            self.aktiviereRadiergummi(30, 60, self.scenePosFromEvent(event))
+                        self.aktiviereRadiergummi(event.points()[0], self.scenePosFromEvent(event))
                 self.bearbeitenStart(self.scenePosFromEvent(event))
                 return True
 
@@ -388,10 +397,8 @@ class Tafelview(QGraphicsView):
                 self.kalibrierePointSize(event.points()[0])
                 if self.isBigPoint(event.points()[0]):
                     if not self._tmpStatus:
-                        if self.isVeryBigPoint(event.points()[0]):
-                            self.aktiviereRadiergummi(60, 120, self.scenePosFromEvent(event))
-                        else:
-                            self.aktiviereRadiergummi(30, 60, self.scenePosFromEvent(event))
+                        self.aktiviereRadiergummi(event.points()[0], self.scenePosFromEvent(event))
+                    self.resizeRadiergummi(event.points()[0])
                 self.bearbeitenWeiter(self.scenePosFromEvent(event))
                 return True
 

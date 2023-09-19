@@ -16,10 +16,9 @@
 # along with this program.  If not, see https://www.gnu.org/licenses/.
 
 import logging
-from PySide6 import QtCore
-from PySide6.QtCore import QEvent, QPointF, QRect, QRectF, QSizeF, Qt, Signal
-from PySide6.QtGui import QBrush, QColor, QPainter, QPalette, QPen, QResizeEvent, QTransform
-from PySide6.QtWidgets import QApplication, QGraphicsEllipseItem, QGraphicsRectItem, QGraphicsItem, QGraphicsScene, QGraphicsView, QMessageBox, QToolButton, QWidget, QGestureEvent, QPinchGesture, QPanGesture
+from PySide6.QtCore import QPointF, QRectF, Qt
+from PySide6.QtGui import QColor, QPalette, QPen
+from PySide6.QtWidgets import QApplication, QGraphicsRectItem, QGraphicsView
 
 logger = logging.getLogger('GUI')
 

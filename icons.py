@@ -15,7 +15,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see https://www.gnu.org/licenses/.
 
-from PySide6.QtCore import QByteArray, QPointF
+from PySide6.QtCore import QByteArray
 from PySide6.QtGui import QColor, QCursor, QImage, QPainter, QPalette, QPixmap, QIcon
 from PySide6.QtSvg import QSvgRenderer
 from PySide6.QtWidgets import QApplication, QGraphicsItem, QStyleOptionGraphicsItem

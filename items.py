@@ -17,7 +17,7 @@
 
 import logging
 from math import atan2, sqrt, log10
-from PySide6.QtCore import QPointF, QRectF, QSizeF, Qt, QEvent
+from PySide6.QtCore import QPointF, QRectF, QSizeF, Qt
 from PySide6.QtGui import QBrush, QColor, QPainterPath, QPalette, QPen, QPixmap
 from PySide6.QtSvgWidgets import QGraphicsSvgItem
 from PySide6.QtWidgets import QApplication, QGraphicsItem, QGraphicsLineItem, QGraphicsPathItem, QGraphicsPixmapItem, QGraphicsRectItem, QGraphicsView
