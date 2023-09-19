@@ -276,6 +276,7 @@ class Editor(QMainWindow):
         # Zu den Signals verbinden
         self._tafelview.eswurdegemalt.connect(self.tafelHatGemalt)
         self._tafelview.statusbarinfo.connect(self.statusbarinfo)
+        self._tafelview.kalibriert.connect(self.kalibriertSpeichern)
         self._karopapierAction.triggered.connect(lambda: self.newItemCreated.emit(Karopapier(self._tafelview)))
         self._linienpapierAction.triggered.connect(lambda: self.newItemCreated.emit(Linienpapier(self._tafelview)))
         self.displayMemoryUsage()
@@ -320,14 +321,16 @@ class Editor(QMainWindow):
         self.setUngespeichert()
         self.displayMemoryUsage()
 
-    def rubbervalue(self):
-        return float(self._settings.value('editor/rubbervalue'))
-
-    def rubberfactor(self):
-        return float(self._settings.value('editor/rubberfactor'))
+    def getKalibriert(self) -> float:
+        return float(self._settings.value('editor/kalibriert', 1500))
 
     def setUngespeichert(self):
         self._ungespeichert = True
+
+    def kalibriertSpeichern(self, value: float):
+        self._settings.setValue('editor/kalibriert', value)
+        self.statusbarinfo(f"Kalibrierter Wert: {value}", 5000)
+        QApplication.beep()
 
     def displayMemoryUsage(self):
         anzahl = len(self._tafelview.scene().items())
@@ -405,12 +408,9 @@ class Editor(QMainWindow):
             <tr><td align='right'>Stiftbreite:&nbsp;</td><td>{self._settings.value('editor/pensize')}</td></tr>
             <tr><td align='right'>Dunkler Modus:&nbsp;</td><td>{self._settings.value('editor/darkmode')}</td></tr>
             <tr><td align='right'>Start der Anwendung:&nbsp;</td><td>{self._settings.value('editor/show')}</td></tr>
-            <tr><td align='right'>Empfindlichkeit Radieren:&nbsp;</td><td>{self._settings.value('editor/rubbervalue')}</td></tr>
-            <tr><td align='right'>Faktor Radieren:&nbsp;</td><td>{self._settings.value('editor/rubberfactor')}</td></tr>
+            <tr><td align='right'>Kalibrierter Flächeninhalt:&nbsp;</td><td>{self._settings.value('editor/kalibriert')}</td></tr>
         </table>
-        <p>Der Start der Anwendung kann mit der Kommandozeilenoption <code>--show [fullscreen,maximized,normal]</code> gesetzt werden.</p>
-        <p>Die Stärke zum Radieren kann mit der Kommandozeilenoption <code>--rubbervalue [float]</code> gesetzt werden.</p>
-        <p>Die Größe beim Radieren kann mit der Kommandozeilenoption <code>--rubberfactor [float]</code> gesetzt werden.</p>'''
+        <p>Der Start der Anwendung kann mit der Kommandozeilenoption <code>--show [fullscreen,maximized,normal]</code> gesetzt werden.</p>'''
         QMessageBox.information(self,'Einstellungen speichern',text)
 
     def settingShowName(self):
@@ -474,9 +474,7 @@ class Editor(QMainWindow):
             <p>Dieses Programm stellt ein einfaches Schreibwerkzeug für den Frontalunterricht dar.</p>
             <h4>Kommandozeilenoptionen</h4>
             <p><code>--logging [debug,info,warning,error,critical]<br/>
-            --show [fullscreen,maximized,normal]<br/>
-            --rubbervalue [float]<br/>
-            --rubberfactor [float]</code></p>
+            --show [fullscreen,maximized,normal]</code></p>
             <p>Startet die Tafel in Vollbild, maximiertem Fenster oder Fenster in Normalgröße. Bei
             einem ungültigen Wert, wird maximized angenommen. Ist diese Option nicht gegeben, wird der Wert
             in den Einstellungen angenommen. Ist der Wert in den Einstellungen nicht gesetzt, wird mit
@@ -561,8 +559,6 @@ if __name__ == "__main__":
     parser = ArgumentParser(description='Endlostafel für das digitale Klassenzimmer. Einfach nur schreiben.')
     parser.add_argument('--logging',choices=['debug','info','warning','error','critical'],help='Öffnet ein Log-Window mit Debug-Meldungen.')
     parser.add_argument('--show',choices=['normal','fullscreen','maximized'],help='Gint an, wie die Tafel geöffnet werden soll.')
-    parser.add_argument('--rubbervalue',type=float,help='Gibt die Größe des TouchPoints, bei der auf Radieren umgeschaltet werden soll.')
-    parser.add_argument('--rubberfactor',type=float,help='Gibt eine Skalierung zwischen Touchpointgröße und Radiergummigröße an.')
     options=vars(parser.parse_args())
 
     QLocale.setDefault(QLocale.German)
@@ -576,16 +572,6 @@ if __name__ == "__main__":
         showmode = options['show']
     else:
         showmode = settings.value('editor/show','maximized')
-
-    if options['rubbervalue']:
-        settings.setValue('editor/rubbervalue', options['rubbervalue'])    
-    if not settings.value('editor/rubbervalue'):
-        settings.setValue('editor/rubbervalue', 1500)
-
-    if options['rubberfactor']:
-        settings.setValue('editor/rubberfactor', options['rubberfactor'])    
-    if not settings.value('editor/rubberfactor'):
-        settings.setValue('editor/rubberfactor', 0.002)
 
     logger = logging.getLogger('GUI')
     d = Editor(settings, options['logging'])

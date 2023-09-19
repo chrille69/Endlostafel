@@ -35,6 +35,7 @@ class Tafelview(QGraphicsView):
     statusbarinfo = Signal(str, int)
     mousemoved = Signal(QPointF)
     mousereleased = Signal()
+    kalibriert = Signal(float)
 
     statusFreihand  = 'freihand'
     statusLinie     = 'linie'
@@ -90,14 +91,12 @@ class Tafelview(QGraphicsView):
         self._totalTransform = self.transform()
         self._fgcolor = QApplication.instance().palette().color(QPalette.WindowText)
         self._kalibriere = False
-        self._mittlerePointsize = 1500
+        self._mittlerePointsize = parent.getKalibriert()
         self._countPointsize = 50
 
         self.setRenderHint(QPainter.Antialiasing)
         self.setTransformationAnchor(QGraphicsView.NoAnchor)
 
-        self._rubbervalue = parent.rubbervalue()
-        self._rubberfactor = parent.rubberfactor()
         self._status2cursor = self.initCursor()
 
         parent.newstatus.connect(self.setStatus)
@@ -442,9 +441,11 @@ class Tafelview(QGraphicsView):
             if self._countPointsize < 50:
                 self._mittlerePointsize = (self._countPointsize * self._mittlerePointsize + self.touchPointSize(point)) / (self._countPointsize+1)
                 self._countPointsize += 1
-                logger.debug(self._mittlerePointsize)
+                logger.debug(f"Kalibrieren: {self._mittlerePointsize}")
             else:
                 self._kalibriere = False
+                self.kalibriert.emit(self._mittlerePointsize)
+
 
     def snapToGeodreieck(self, pos):
         if self._geodreieck.scene() != self.scene():
