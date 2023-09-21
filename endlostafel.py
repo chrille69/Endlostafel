@@ -18,6 +18,8 @@
 import sys
 import logging
 from functools import partial
+from argparse import ArgumentParser
+from typing import IO
 
 from PySide6.QtCore import QEvent, QLocale, QMarginsF, QSettings, QDate, QTime, QTimer, Qt, Signal
 from PySide6.QtSvg import QSvgGenerator
@@ -325,10 +327,10 @@ class Editor(QMainWindow):
         return float(self._settings.value('editor/kalibriert', 1500))
 
     def getBigPointFactor(self) -> float:
-        return float(self._settings.value('editor/bigpointfactor', 2))
+        return float(self._settings.value('editor/bigpointfactor', 3))
 
     def getVeryBigPointFactor(self) -> float:
-        return float(self._settings.value('editor/verybigpointfactor', 4))
+        return float(self._settings.value('editor/verybigpointfactor', 6))
 
     def setUngespeichert(self):
         self._ungespeichert = True
@@ -563,21 +565,37 @@ class Uhr(QLabel):
             text = text[:-3]+' '+text[-2:]
         self.setText(text)
 
+class EndlostafelArgumentParserError(Exception):
+    pass
+
+class EndlostafelArgumentParser(ArgumentParser):
+    def error(self, message):
+        raise EndlostafelArgumentParserError(message+"\n"+self.format_usage())
+    def print_help(self, file: IO[str] | None = None) -> None:
+        raise EndlostafelArgumentParserError(self.format_help())
 
 if __name__ == "__main__":
-    from argparse import ArgumentParser
-    parser = ArgumentParser(description='Endlostafel für das digitale Klassenzimmer. Einfach nur schreiben.')
-    parser.add_argument('--logging',choices=['debug','info','warning','error','critical'],help='Öffnet ein Log-Window mit Debug-Meldungen.')
-    parser.add_argument('--show',choices=['normal','fullscreen','maximized'],help='Gibt an, wie die Tafel geöffnet werden soll.')
-    parser.add_argument('--bigpointfactor',type=float,help='Größe eines großen Touchpoints gegenüber des kalibrierten Touchpoints.')
-    parser.add_argument('--verybigpointfactor',type=float,help='Größe eines sehr großen Touchpoints gegenüber des kalibrierten Touchpoints.')
-    options=vars(parser.parse_args())
-
     QLocale.setDefault(QLocale.German)
     app = QApplication()
     app.setStyle('Fusion')
     app.setWindowIcon(getIconSvg('oszli'))
     app.setApplicationDisplayName('Endlostafel')
+
+    parser = EndlostafelArgumentParser(description='Endlostafel für das digitale Klassenzimmer. Einfach nur schreiben.')
+    parser.add_argument('--logging',choices=['debug','info','warning','error','critical'],help='Öffnet ein Log-Window mit Debug-Meldungen.')
+    parser.add_argument('--show',choices=['normal','fullscreen','maximized'],help='Gibt an, wie die Tafel geöffnet werden soll.')
+    parser.add_argument('--bigpointfactor',type=float,help='Größe eines großen Touchpoints gegenüber des kalibrierten Touchpoints.')
+    parser.add_argument('--verybigpointfactor',type=float,help='Größe eines sehr großen Touchpoints gegenüber des kalibrierten Touchpoints.')
+
+    try:
+        namespace = parser.parse_args()
+    except EndlostafelArgumentParserError as e:
+        logwindow = LogWindow(None)
+        logwindow.show()
+        logwindow.append(e.args[0])
+        sys.exit(app.exec())
+
+    options=vars(namespace)
 
     settings = QSettings('hoffmann', 'endlostafel')
     if options['show']:
