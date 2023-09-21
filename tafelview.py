@@ -285,7 +285,7 @@ class Tafelview(QGraphicsView):
             self.createCurrentItem(pos)
             self._painting = True
 
-    def bearbeitenWeiter(self,pos) -> bool:
+    def bearbeitenWeiter(self, pos) -> bool:
         if not self._painting:
             self._verschiebeGeo = self._geodreieck.posInVerschiebegriff(pos)
             self._dreheGeo = self._geodreieck.posInDrehgriff(pos)

@@ -574,6 +574,11 @@ class EndlostafelArgumentParser(ArgumentParser):
     def print_help(self, file: IO[str] | None = None) -> None:
         raise EndlostafelArgumentParserError(self.format_help())
 
+logger = logging.getLogger('GUI')
+
+def ausnahmen(typ, ausnahme, wasanderes):
+    logger.exception(ausnahme, exc_info=True)
+
 if __name__ == "__main__":
     QLocale.setDefault(QLocale.German)
     app = QApplication()
@@ -588,14 +593,17 @@ if __name__ == "__main__":
     parser.add_argument('--verybigpointfactor',type=float,help='Größe eines sehr großen Touchpoints gegenüber des kalibrierten Touchpoints.')
 
     try:
-        namespace = parser.parse_args()
+        options=vars(parser.parse_args())
     except EndlostafelArgumentParserError as e:
         logwindow = LogWindow(None)
         logwindow.show()
         logwindow.append(e.args[0])
         sys.exit(app.exec())
 
-    options=vars(namespace)
+    if options['logging']:
+        logger.setLevel(options['logging'].upper())
+    sys.excepthook = ausnahmen
+
 
     settings = QSettings('hoffmann', 'endlostafel')
     if options['show']:
@@ -609,12 +617,9 @@ if __name__ == "__main__":
     if options['verybigpointfactor']:
         settings.setValue('editor/verybigpointfactor', options['verybigpointfactor'])
 
-    logger = logging.getLogger('GUI')
     d = Editor(settings, options['logging'])
     handler = LogWindowHandler(d.logwindow)
 
-    if options['logging']:
-        logger.setLevel(options['logging'].upper())
     logger.addHandler(handler)
     logger.info(f"Starte Endlostafel Version {VERSION}")
 
