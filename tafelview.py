@@ -19,7 +19,7 @@ import logging
 from PySide6 import QtCore
 from PySide6.QtCore import QEvent, QPointF, QRect, QRectF, QSizeF, Qt, Signal
 from PySide6.QtGui import QBrush, QColor, QPainter, QPalette, QPen, QResizeEvent, QTransform
-from PySide6.QtWidgets import QApplication, QGraphicsRectItem, QGraphicsItem, QGraphicsScene, QGraphicsView, QMessageBox, QToolButton, QWidget
+from PySide6.QtWidgets import QApplication, QGraphicsRectItem, QGraphicsItem, QGraphicsScene, QGraphicsView, QMessageBox, QToolButton, QWidget, QPinchGesture
 
 from icons import getNameCursor, getIconSvg, getItemCursor
 from items import Ellipse, Kreis, Line, LineSnap, Pfad, Pfeil, PfeilSnap, Punkt, Quadrat, Rechteck, Stift
@@ -68,7 +68,6 @@ class Tafelview(QGraphicsView):
         self._status = status
         self._tmpStatus = None
         self._painting = False
-        self._gestureActive = False
         self._dreheGeo: bool = None
         self._verschiebeGeo: bool = None
         self.setDragMode(QGraphicsView.RubberBandDrag)
@@ -330,32 +329,48 @@ class Tafelview(QGraphicsView):
     def touchPointSize(self, point):
         ellipse = point.ellipseDiameters()
         area = ellipse.height()**2 + ellipse.width()**2
-        logger.info(f"Pointsize: {ellipse}, Fläche={area}")
+        #logger.info(f"Pointsize: {ellipse}, Fläche={area}")
         return area
     
-    def isBigPoint(self, point) -> True:
-        return self.touchPointSize(point) > self._mittlerePointsize * self._bigpointfactor and not self._kalibriere
+    def isBigPoint(self, pointsize) -> True:
+        return pointsize > self._mittlerePointsize * self._bigpointfactor and not self._kalibriere
 
-    def isVeryBigPoint(self, point) -> True:
-        return self.touchPointSize(point) > self._mittlerePointsize * self._verybigpointfactor and not self._kalibriere
+    def isVeryBigPoint(self, pointsize) -> True:
+        return pointsize > self._mittlerePointsize * self._verybigpointfactor and not self._kalibriere
 
-    def verschiebeLeinwand(self, dpoint: QPointF):
-        xscale = self.transform().m11()
-        yscale = self.transform().m22()
-        self.translate(dpoint.x()/xscale, dpoint.y()/yscale)
+    def getPointSizeList(self, event):
+        return [self.touchPointSize(point) for point in event.points()]
 
-    def aktiviereRadiergummi(self, point, pos):
+    def verschiebeLeinwand(self, point: QPointF, lastpoint: QPointF):
+        scpoint = self.mapToScene(point.toPoint())
+        sclastpoint = self.mapToScene(lastpoint.toPoint())
+        dpoint = scpoint -sclastpoint
+        rectvor = self.mapToScene(self.viewport().geometry()).boundingRect()
+        self.translate(dpoint.x(), dpoint.y())
+        rectnach = self.mapToScene(self.viewport().geometry()).boundingRect()
+        if rectvor.x() == rectnach.x() and dpoint.x() != 0 or rectvor.y() == rectnach.y() and dpoint.y() != 0:
+            logger.debug(f"dpoint={dpoint}")
+            if dpoint.x() > 0:
+                self.erweitern('left', self.mapFromParent(dpoint).x())
+            if dpoint.x() < 0:
+                self.erweitern('right', -self.mapFromParent(dpoint).x())
+            if dpoint.y() > 0:
+                self.erweitern('top', self.mapFromParent(dpoint).y())
+            if dpoint.y() < 0:
+                self.erweitern('bottom', -self.mapFromParent(dpoint).y())
+
+    def aktiviereRadiergummi(self, pointsize, pos):
         self._tmpStatus = self._status
         width, height = Tafelview.RADIERGUMMISIZESMALL
-        if self.isVeryBigPoint(point):
+        if self.isVeryBigPoint(pointsize):
             width, height = Tafelview.RADIERGUMMISIZEBIG
         self._radiergummi = Radiergummi(self, width/self.transform().m11(), height/self.transform().m22(), pos)
         self.scene().addItem(self._radiergummi)
         self.setStatus(Tafelview.statusRadiere)
 
-    def resizeRadiergummi(self, point):
+    def resizeRadiergummi(self, pointsize):
         width, height = Tafelview.RADIERGUMMISIZESMALL
-        if self.isVeryBigPoint(point):
+        if self.isVeryBigPoint(pointsize):
             width, height = Tafelview.RADIERGUMMISIZEBIG
         self._radiergummi.setSize(width/self.transform().m11(), height/self.transform().m22())
     
@@ -366,7 +381,10 @@ class Tafelview(QGraphicsView):
         self._radiergummi = Radiergummi(self, self._radierdurchmesser, self._radierdurchmesser, QPointF(0,0))
 
     def viewportEvent(self, event: QtCore.QEvent) -> bool:
-        
+        #if logger.isEnabledFor(logging.DEBUG):
+        #    logger.debug(str(event))
+        #    logger.debug(f"Status: {self._status}, Painting: {self._painting}")
+
         try:
             if self._status == Tafelview.statusEdit:
                 return super().viewportEvent(event)
@@ -375,37 +393,33 @@ class Tafelview(QGraphicsView):
             if eventtype == QEvent.Gesture:
                 gesture = event.gesture(Qt.PinchGesture)
                 if gesture:
-                    if gesture.state() == Qt.GestureUpdated:
-                        self._gestureActive = True
-                        dpoint = gesture.centerPoint() - gesture.lastCenterPoint()
-                        self.verschiebeLeinwand(dpoint)
+                    if gesture.state() == Qt.GestureUpdated and gesture.changeFlags() | QPinchGesture.CenterPointChanged:
+                        self.verschiebeLeinwand(gesture.centerPoint(), gesture.lastCenterPoint())
                 return True
 
             elif eventtype == QEvent.TouchBegin:
-                if self._gestureActive:
-                    return False
-                if self.isBigPoint(event.points()[0]):
+                maxPointSize = max(self.getPointSizeList(event))
+                if self.isBigPoint(maxPointSize):
                     if not self._tmpStatus:
-                        self.aktiviereRadiergummi(event.points()[0], self.scenePosFromEvent(event))
+                        self.aktiviereRadiergummi(maxPointSize, self.scenePosFromEvent(event))
                 self.bearbeitenStart(self.scenePosFromEvent(event))
                 return True
 
             elif eventtype == QEvent.TouchUpdate:
-                if self._gestureActive:
-                    return False
                 if event.pointCount() > 1:
                     self.deleteCurrentItem()
                     return False
-                self.kalibrierePointSize(event.points()[0])
-                if self.isBigPoint(event.points()[0]):
+                maxPointSize = max(self.getPointSizeList(event))
+                #logger.debug(event.points())
+                self.kalibrierePointSize(maxPointSize)
+                if self.isBigPoint(maxPointSize):
                     if not self._tmpStatus:
-                        self.aktiviereRadiergummi(event.points()[0], self.scenePosFromEvent(event))
-                    self.resizeRadiergummi(event.points()[0])
+                        self.aktiviereRadiergummi(maxPointSize, self.scenePosFromEvent(event))
+                    self.resizeRadiergummi(maxPointSize)
                 self.bearbeitenWeiter(self.scenePosFromEvent(event))
                 return True
 
             elif eventtype in [QEvent.TouchCancel,QEvent.TouchEnd]:
-                self._gestureActive = False
                 self.bearbeitenFertig(self.scenePosFromEvent(event))
                 if self._tmpStatus:
                     self.deaktiviereRadiergummi()
@@ -445,10 +459,10 @@ class Tafelview(QGraphicsView):
         self._countPointsize = 0
         self._mittlerePointsize = 0
     
-    def kalibrierePointSize(self, point):
+    def kalibrierePointSize(self, pointsize):
         if self._kalibriere:
             if self._countPointsize < 50:
-                self._mittlerePointsize = (self._countPointsize * self._mittlerePointsize + self.touchPointSize(point)) / (self._countPointsize+1)
+                self._mittlerePointsize = (self._countPointsize * self._mittlerePointsize + pointsize) / (self._countPointsize+1)
                 self._countPointsize += 1
                 logger.debug(f"Kalibrieren: {self._mittlerePointsize}")
             else:
@@ -523,38 +537,33 @@ class Tafelview(QGraphicsView):
         rect |= self.sceneRect()
         self.setSceneRect(rect)
 
-    def erweitern(self, richtung):
+    def erweitern(self, richtung, laenge=0):
         scenerect = self.sceneRect()
         viewrect = self.mapToScene(self.viewport().geometry()).boundingRect()
-        center = viewrect.center()
         if richtung == 'bottom':
-            halb = viewrect.height()/2
-            punkt = center + QPointF(0, halb)
-            if not scenerect.contains(punkt + QPointF(0, halb)):
-                scenerect.setBottom(punkt.y() + halb)
+            offset = laenge if laenge else viewrect.height()/2
+            if not scenerect.contains(viewrect.bottomLeft() + QPointF(0, offset)):
+                scenerect.setBottom(viewrect.bottom() + offset)
                 self.setSceneRect(scenerect)
-            self.centerOn(punkt)
+            self.translate(0, -offset)
         elif richtung == 'top':
-            halb = viewrect.height()/2
-            punkt = center - QPointF(0, halb)
-            if not scenerect.contains(punkt - QPointF(0, halb)):
-                scenerect.setTop(punkt.y() - halb)
+            offset = laenge if laenge else viewrect.height()/2
+            if not scenerect.contains(viewrect.topLeft() - QPointF(0, offset)):
+                scenerect.setTop(viewrect.top() - offset)
                 self.setSceneRect(scenerect)
-            self.centerOn(punkt)
+            self.translate(0, offset)
         elif richtung == 'left':
-            halb = viewrect.width()/2
-            punkt = center - QPointF(halb,0)
-            if not scenerect.contains(punkt - QPointF(halb,0)):
-                scenerect.setLeft(punkt.x() - halb)
+            offset = laenge if laenge else viewrect.width()/2
+            if not scenerect.contains(viewrect.topLeft() - QPointF(offset,0)):
+                scenerect.setLeft(viewrect.left() - offset)
                 self.setSceneRect(scenerect)
-            self.centerOn(punkt)
+            self.translate(offset, 0)
         elif richtung == 'right':
-            halb = viewrect.width()/2
-            punkt = center + QPointF(halb,0)
-            if not scenerect.contains(punkt + QPointF(halb,0)):
-                scenerect.setRight(punkt.x() + halb)
+            offset = laenge if laenge else viewrect.width()/2
+            if not scenerect.contains(viewrect.topRight() + QPointF(offset,0)):
+                scenerect.setRight(viewrect.right() + offset)
                 self.setSceneRect(scenerect)
-            self.centerOn(punkt)
+            self.translate(-offset, 0)
 
     def undo(self):
         items = self.scene().items()
