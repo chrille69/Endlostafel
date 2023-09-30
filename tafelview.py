@@ -387,7 +387,7 @@ class Tafelview(QGraphicsView):
 
     def viewportEvent(self, event: QtCore.QEvent) -> bool:
         #if logger.isEnabledFor(logging.DEBUG):
-        #    logger.debug(str(event))
+        #    logger.debug(str(event.type()))
         #    logger.debug(f"Status: {self._status}, Painting: {self._painting}")
 
         try:
@@ -451,7 +451,10 @@ class Tafelview(QGraphicsView):
 
             elif eventtype == QEvent.MouseButtonDblClick:
                 return False
-            
+
+            elif eventtype == QEvent.ContextMenu:
+                return False
+
             return super().viewportEvent(event)
         
         except Exception as e:

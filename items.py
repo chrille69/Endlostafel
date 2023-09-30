@@ -79,7 +79,7 @@ class Pfad(QGraphicsPathItem):
             clonepfad.setShape(self._shape)
         return clonepfad
 
-    def removeElements(self, ellipse: QPainterPath):
+    def removeElements(self, radiererpfad: QPainterPath):
         neupfad = QPainterPath()
         if self.brush() != Qt.NoBrush:
             # Gefüllte Elemente werden gelöscht.
@@ -91,7 +91,7 @@ class Pfad(QGraphicsPathItem):
             for i in range(anzahl):
                 element = self.path().elementAt(i)
                 pos = QPointF(element.x, element.y)
-                if ellipse.contains(self.mapToScene(pos)) and element.type != QPainterPath.CurveToDataElement:
+                if radiererpfad.contains(self.mapToScene(pos)) and element.type != QPainterPath.CurveToDataElement:
                     # Dieser Punkt wird nicht gezeichnet
                     geschnitten = True
                 else:
@@ -109,15 +109,9 @@ class Pfad(QGraphicsPathItem):
                         else:
                             neupfad.moveTo(pos)
                     geschnitten=False
+
         self.setPath(neupfad)
         self.setTransformOriginPoint(self.boundingRect().center())
-
-    def schnittLinieKreis(self, pos1, pos2, m, r):
-        n = QPointF(pos2.y()-pos1.y(),pos1.x()-pos2.x())
-        d = abs(((m.x()-pos1.x())*n.x()+(m.y()-pos1.y())*n.y()) / sqrt(n.x()*n.x()+n.y()*n.y()))
-        return d < r
-
-
 
 
 
