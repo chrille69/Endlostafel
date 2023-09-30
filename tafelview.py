@@ -17,7 +17,7 @@
 
 import logging
 from PySide6 import QtCore
-from PySide6.QtCore import QEvent, QPointF, QRect, QRectF, QSizeF, Qt, Signal
+from PySide6.QtCore import QEvent, QPointF, QRect, QSizeF, Qt, Signal, Slot
 from PySide6.QtGui import QBrush, QColor, QPainter, QPalette, QPen, QResizeEvent, QTransform
 from PySide6.QtWidgets import QApplication, QGraphicsRectItem, QGraphicsItem, QGraphicsScene, QGraphicsView, QMessageBox, QToolButton, QWidget, QPinchGesture
 
@@ -85,7 +85,7 @@ class Tafelview(QGraphicsView):
         self._arrowbrush = QBrush(QColor(qcolor))
         self._arrowpen = QPen(self._drawpen)
         self._arrowpen.setJoinStyle(Qt.MiterJoin)
-        self._radiersize = QSizeF(pensize*10, pensize*10)
+        self._radiersize = QSizeF(pensize*5, pensize*10)
         self._radiergummi = Radiergummi(self, self._radiersize/self.transform().m11(), QPointF(0,0))
         self._currentpen: QPen = None
         self._currentbrush: QBrush = None
@@ -152,12 +152,14 @@ class Tafelview(QGraphicsView):
     def fgcolor(self):
         return self._fgcolor
 
+    @Slot()
     def newPalette(self):
         self._status2cursor = self.initCursor()
         self.setCustomCursor()
         self._fgcolor = QApplication.instance().palette().color(QPalette.WindowText)
 
-    def setPencolor(self, colorname):
+    @Slot(str)
+    def setPencolor(self, colorname: str):
         if colorname == 'foreground':
             qcolor = self._fgcolor
         else:
@@ -166,10 +168,11 @@ class Tafelview(QGraphicsView):
         self._arrowpen.setColor(qcolor)
         self._arrowbrush.setColor(qcolor)
 
-    def setPensize(self, pensize):
+    @Slot(float)
+    def setPensize(self, pensize: float):
         self._drawpen.setWidthF(pensize)
         self._arrowpen.setWidthF(pensize)
-        self._radiersize = QSizeF(pensize*10, pensize*10)
+        self._radiersize = QSizeF(pensize*5, pensize*10)
         self._radiergummi = Radiergummi(self, self._radiersize/self.transform().m11(), QPointF(0,0))
         self.setCustomCursor()
 
@@ -202,6 +205,7 @@ class Tafelview(QGraphicsView):
             cursor = self._status2cursor[self._status]
         self.viewport().setCursor(cursor)
 
+    @Slot(str)
     def setStatus(self, status):
         if status not in self.statusArray:
             raise ValueError(f'Unbekannter Status: {status}')
@@ -453,12 +457,6 @@ class Tafelview(QGraphicsView):
         except Exception as e:
             logger.exception(e, exc_info=True)
 
-    def starteKalibrieren(self):
-        logger.debug('Kalibriere')
-        self._kalibriere = True
-        self._countPointsize = 0
-        self._mittlerePointsize = 0
-    
     def kalibrierePointSize(self, pointsize):
         if self._kalibriere:
             if self._countPointsize < 50:
@@ -489,6 +487,36 @@ class Tafelview(QGraphicsView):
             if hasattr(item,'path') and callable(item.path) and item.path().elementCount() < 2:
                 self.scene().removeItem(item)
 
+    def berechneSceneRectNeu(self, item: QGraphicsItem):
+        # Mögliche Erweiterung des sceneRect berechnen
+        rect = item.sceneBoundingRect()
+        rect |= self.sceneRect()
+        self.setSceneRect(rect)
+
+    def setSceneRectFromViewport(self):
+        r = QRect(self.viewport().rect())
+        r.setWidth(r.width()-20)
+        self.scene().setSceneRect(r)
+        self.centerGeodreieck()
+
+    def scale(self, sx: float, sy: float):
+        super().scale(sx, sy)
+        self._radiergummi = Radiergummi(self, self._radiersize/self.transform().m11(), QPointF(0,0))
+        self.setCustomCursor()
+
+    def resetTransform(self):
+        super().resetTransform()
+        self._radiergummi = Radiergummi(self, self._radiersize/self.transform().m11(), QPointF(0,0))
+        self.setCustomCursor()
+
+    @Slot()
+    def starteKalibrieren(self):
+        logger.debug('Kalibriere')
+        self._kalibriere = True
+        self._countPointsize = 0
+        self._mittlerePointsize = 0
+    
+    @Slot()
     def deleteItems(self):
         if not self.scene().selectedItems():
             QMessageBox.warning(self, 'Hinweis', 'Bitte wählen Sie Elemente aus.')
@@ -500,6 +528,7 @@ class Tafelview(QGraphicsView):
             self.scene().removeItem(item)
         self.eswurdegemalt.emit()
 
+    @Slot()
     def copyItems(self):
         if not self.scene().selectedItems():
             QMessageBox.warning(self, 'Hinweis', 'Bitte wählen Sie Elemente aus.')
@@ -519,7 +548,8 @@ class Tafelview(QGraphicsView):
         if not funktioniert_nicht:
             self.statusbarinfo.emit('Die Elemente sind kopiert. Bitte jetzt verschieben...',5000)
 
-    def importItem(self, item):
+    @Slot(QGraphicsItem)
+    def importItem(self, item: QGraphicsItem):
         self.scene().addItem(item)
         item.setPos(self.mapToScene(0,0))
         self.berechneSceneRectNeu(item)
@@ -527,13 +557,8 @@ class Tafelview(QGraphicsView):
         self.statusbarinfo.emit('Das Element oben links eingefügt. Bitte jetzt verschieben...',5000)
         self.eswurdegemalt.emit() 
 
-    def berechneSceneRectNeu(self, item: QGraphicsItem):
-        # Mögliche Erweiterung des sceneRect berechnen
-        rect = item.sceneBoundingRect()
-        rect |= self.sceneRect()
-        self.setSceneRect(rect)
-
-    def erweitern(self, richtung, laenge=0):
+    @Slot(str, float)
+    def erweitern(self, richtung: str, laenge: float=0):
         scenerect = self.sceneRect()
         viewrect = self.mapToScene(self.viewport().geometry()).boundingRect()
         if richtung == 'bottom':
@@ -561,6 +586,7 @@ class Tafelview(QGraphicsView):
                 self.setSceneRect(scenerect)
             self.translate(-offset, 0)
 
+    @Slot()
     def undo(self):
         items = self.scene().items()
         for item in items:
@@ -571,12 +597,14 @@ class Tafelview(QGraphicsView):
             break
         self.eswurdegemalt.emit()
 
+    @Slot()
     def redo(self):
         if self._redoitems:
             item = self._redoitems.pop()
             self.scene().addItem(item)
         self.eswurdegemalt.emit()
 
+    @Slot()
     def zoomin(self):
         if self._status == self.statusEdit:
             if not self.scene().selectedItems():
@@ -589,6 +617,7 @@ class Tafelview(QGraphicsView):
         else:
             self.scale(1.1,1.1)
 
+    @Slot()
     def zoomout(self):
         if self._status == self.statusEdit:
             if not self.scene().selectedItems():
@@ -601,6 +630,7 @@ class Tafelview(QGraphicsView):
         else:
             self.scale(1/1.1,1/1.1)
 
+    @Slot()
     def zoomreset(self):
         if self._status == self.statusEdit:
             if not self.scene().selectedItems():
@@ -610,8 +640,9 @@ class Tafelview(QGraphicsView):
                 item.setScale(1)
                 self.berechneSceneRectNeu(item)
         else:
-            self.setTransform(QTransform())
+            self.resetTransform()
 
+    @Slot()
     def clearall(self):
         geodreiecksichtbar = False
         if self._geodreieck.scene():
@@ -626,18 +657,14 @@ class Tafelview(QGraphicsView):
         self.resized.emit()
         return super().resizeEvent(event)
 
-    def setSceneRectFromViewport(self):
-        r = QRect(self.viewport().rect())
-        r.setWidth(r.width()-20)
-        self.scene().setSceneRect(r)
-        self.centerGeodreieck()
-
+    @Slot()
     def changeSceneRect(self):
         r = self.sceneRect()
         r2 = self.viewport().rect()
         self.scene().setSceneRect(r|r2)
 
-    def enableGeodreieck(self, enable):
+    @Slot(bool)
+    def enableGeodreieck(self, enable: bool):
         if enable:
             self.scene().addItem(self._geodreieck)
             self._geodreieck.setPos(self.mapToScene(self.viewport().rect().center()))
@@ -659,9 +686,11 @@ class erweiternButton(QToolButton):
         self.setCursor(Qt.ArrowCursor)
         parent.parent().paletteChanged.connect(self.newPalette)
 
+    @Slot()
     def newPalette(self):
         self.setIcon(getIconSvg('go-'+self._richtung))
 
+    @Slot()
     def moveToSide(self):
         parent = self.parentWidget()
         _, _, w, h = parent.viewport().rect().getRect()
