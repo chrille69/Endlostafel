@@ -15,10 +15,14 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see https://www.gnu.org/licenses/.
 
+import logging
+
 from PySide6.QtCore import QByteArray
 from PySide6.QtGui import QColor, QCursor, QImage, QPainter, QPalette, QPixmap, QIcon
 from PySide6.QtSvg import QSvgRenderer
 from PySide6.QtWidgets import QApplication, QGraphicsItem, QStyleOptionGraphicsItem
+
+logger = logging.getLogger('GUI')
 
 def getImageSvg(name, status=QIcon.Normal):
 
@@ -43,12 +47,13 @@ def getImageSvg(name, status=QIcon.Normal):
     painter.end()
     return img
 
-def getItemCursor(item: QGraphicsItem, hotx, hoty):
+def getItemCursor(item: QGraphicsItem, scale, hotx, hoty):
 
-    img = QImage(item.boundingRect().size().toSize(), QImage.Format_ARGB32)
+    img = QImage(item.boundingRect().size().toSize()*scale, QImage.Format_ARGB32)
     img.fill(0)
     painter = QPainter()
     painter.begin(img)
+    painter.scale(scale,scale)
     painter.translate(-item.boundingRect().topLeft())
     item.paint(painter, QStyleOptionGraphicsItem())
     painter.end()
@@ -227,13 +232,16 @@ iconssvg = {
         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" version="1.1">
             <path style="fill:{htmlcolor}" d="M 9,2 14,5 9,8 V 6 H 6 C 4.32,6 3,7.321 3,9 3,10.679 4.32,12 6,12 H 11 V 14 H 6 C 3.25,14 1,11.753 1,9 1,6.247 3.25,4 6,4 H 9 Z"/>
         </svg>''',
-    'open': '''
-        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" version="1.1">
-            <path style="fill:{htmlcolor}" d="M 8 1 L 3.5 7 L 6 7 L 6 13 L 10 13 L 10 7 L 12.5 7 L 8 1 z M 1 14 L 1 16 L 15 16 L 15 14 L 1 14 z"/>
-        </svg>''',
     'save': '''
-        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" version="1.1">
-            <path style="fill:{htmlcolor}" d="M 6 1 L 6 7 L 3.5 7 L 8 13 L 12.5 7 L 10 7 L 10 1 L 6 1 z M 1 14 L 1 16 L 15 16 L 15 14 L 1 14 z"/>
+        <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 0 24 24" width="24px" fill="{htmlcolor}">
+            <path d="M0 0h24v24H0V0z" fill="none" />
+            <path
+                d="M17 3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V7l-4-4zm2 16H5V5h11.17L19 7.83V19zm-7-7c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3zM6 6h9v4H6z" />
+        </svg>''',
+    'open': '''
+        <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 0 24 24" width="24px" fill="{htmlcolor}">
+            <rect fill="none" height="24" width="24" />
+            <path d="M15,22H6c-1.1,0-2-0.9-2-2V4c0-1.1,0.9-2,2-2h8l6,6v6h-2V9h-5V4H6v16h9V22z M19,21.66l0-2.24l2.95,2.95l1.41-1.41L20.41,18 h2.24v-2H17v5.66H19z" />
         </svg>''',
     'prefs': '''
         <svg width="24px" height="24px" fill="{htmlcolor}" version="1.1" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
