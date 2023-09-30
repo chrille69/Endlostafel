@@ -60,8 +60,8 @@ class Tafelview(QGraphicsView):
         statusEdit, statusRadiere
     ]
 
-    RADIERGUMMISIZESMALL = [30, 60]
-    RADIERGUMMISIZEBIG   = [90, 180]
+    RADIERGUMMISIZESMALL = QSizeF(30, 60)
+    RADIERGUMMISIZEBIG   = QSizeF(90, 180)
 
     def __init__(self, parent: QWidget, qcolor: QColor=QColor(Qt.black), pensize: float=3, status: str=statusFreihand):
         super().__init__(parent)
@@ -85,9 +85,8 @@ class Tafelview(QGraphicsView):
         self._arrowbrush = QBrush(QColor(qcolor))
         self._arrowpen = QPen(self._drawpen)
         self._arrowpen.setJoinStyle(Qt.MiterJoin)
-        self._radierdurchmesser = pensize*10
-        self._tmpRadierdurchmesser = None
-        self._radiergummi = Radiergummi(self, self._radierdurchmesser, self._radierdurchmesser, QPointF(0,0))
+        self._radiersize = QSizeF(pensize*10, pensize*10)
+        self._radiergummi = Radiergummi(self, self._radiersize/self.transform().m11(), QPointF(0,0))
         self._currentpen: QPen = None
         self._currentbrush: QBrush = None
         self._totalTransform = self.transform()
@@ -170,8 +169,8 @@ class Tafelview(QGraphicsView):
     def setPensize(self, pensize):
         self._drawpen.setWidthF(pensize)
         self._arrowpen.setWidthF(pensize)
-        self._radierdurchmesser = pensize*10
-        self._radiergummi = Radiergummi(self, self._radierdurchmesser, self._radierdurchmesser, QPointF(0,0))
+        self._radiersize = QSizeF(pensize*10, pensize*10)
+        self._radiergummi = Radiergummi(self, self._radiersize/self.transform().m11(), QPointF(0,0))
         self.setCustomCursor()
 
     def centerGeodreieck(self):
@@ -198,7 +197,7 @@ class Tafelview(QGraphicsView):
 
     def setCustomCursor(self):
         if self._status == Tafelview.statusRadiere:
-            cursor = getItemCursor(self._radiergummi, -1, -1)
+            cursor = getItemCursor(self._radiergummi, self.transform().m11(), -1, -1)
         else:
             cursor = self._status2cursor[self._status]
         self.viewport().setCursor(cursor)
@@ -361,24 +360,26 @@ class Tafelview(QGraphicsView):
 
     def aktiviereRadiergummi(self, pointsize, pos):
         self._tmpStatus = self._status
-        width, height = Tafelview.RADIERGUMMISIZESMALL
+        size = Tafelview.RADIERGUMMISIZESMALL
         if self.isVeryBigPoint(pointsize):
-            width, height = Tafelview.RADIERGUMMISIZEBIG
-        self._radiergummi = Radiergummi(self, width/self.transform().m11(), height/self.transform().m22(), pos)
+            size = Tafelview.RADIERGUMMISIZEBIG
+        self._radiergummi = Radiergummi(self, size/self.transform().m11(), pos)
         self.scene().addItem(self._radiergummi)
         self.setStatus(Tafelview.statusRadiere)
 
     def resizeRadiergummi(self, pointsize):
-        width, height = Tafelview.RADIERGUMMISIZESMALL
+        if self._radiergummi.size() == Tafelview.RADIERGUMMISIZEBIG:
+            return
+        size = Tafelview.RADIERGUMMISIZESMALL
         if self.isVeryBigPoint(pointsize):
-            width, height = Tafelview.RADIERGUMMISIZEBIG
-        self._radiergummi.setSize(width/self.transform().m11(), height/self.transform().m22())
+            size = Tafelview.RADIERGUMMISIZEBIG
+        self._radiergummi.setSize(size/self.transform().m11())
     
     def deaktiviereRadiergummi(self):
         self.setStatus(self._tmpStatus)
         self._tmpStatus = None
         self.scene().removeItem(self._radiergummi)
-        self._radiergummi = Radiergummi(self, self._radierdurchmesser, self._radierdurchmesser, QPointF(0,0))
+        self._radiergummi = Radiergummi(self, self._radiersize/self.transform().m11(), QPointF(0,0))
 
     def viewportEvent(self, event: QtCore.QEvent) -> bool:
         #if logger.isEnabledFor(logging.DEBUG):
@@ -392,7 +393,7 @@ class Tafelview(QGraphicsView):
             eventtype = event.type()
             if eventtype == QEvent.Gesture:
                 gesture = event.gesture(Qt.PinchGesture)
-                if gesture:
+                if gesture and not self._tmpStatus:
                     if gesture.state() == Qt.GestureUpdated and gesture.changeFlags() | QPinchGesture.CenterPointChanged:
                         self.verschiebeLeinwand(gesture.centerPoint(), gesture.lastCenterPoint())
                 return True
@@ -408,7 +409,6 @@ class Tafelview(QGraphicsView):
             elif eventtype == QEvent.TouchUpdate:
                 if event.pointCount() > 1:
                     self.deleteCurrentItem()
-                    return False
                 maxPointSize = max(self.getPointSizeList(event))
                 #logger.debug(event.points())
                 self.kalibrierePointSize(maxPointSize)
@@ -481,12 +481,8 @@ class Tafelview(QGraphicsView):
         return self._geodreieck.mapToScene(posGeo)
     
     def radiere(self, pos):
-        if self._radiergummi:
-            self._radiergummi.setPos(pos)
-            radierpath = QGraphicsRectItem(self._radiergummi.sceneBoundingRect()).shape()
-        else:
-            durchmesser = self._radierdurchmesser/self.transform().m11()
-            radierpath = QGraphicsRectItem(QRectF(pos-QPointF(durchmesser/2,durchmesser/2),QSizeF(durchmesser,durchmesser))).shape()
+        self._radiergummi.setPos(pos)
+        radierpath = QGraphicsRectItem(self._radiergummi.sceneBoundingRect()).shape()
         for item in self.scene().items(radierpath):
             if hasattr(item,'removeElements') and callable(item.removeElements):
                 item.removeElements(radierpath)

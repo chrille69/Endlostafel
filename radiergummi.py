@@ -16,28 +16,34 @@
 # along with this program.  If not, see https://www.gnu.org/licenses/.
 
 import logging
-from PySide6.QtCore import QPointF, QRectF, Qt
+from PySide6.QtCore import QPointF, QRectF, Qt, QSizeF
 from PySide6.QtGui import QColor, QPalette, QPen
 from PySide6.QtWidgets import QApplication, QGraphicsRectItem, QGraphicsView
 
 logger = logging.getLogger('GUI')
 
 class Radiergummi(QGraphicsRectItem):
-    def __init__(self, view: QGraphicsView, width: float, height: float, pos: QPointF = QPointF(0,0)):
+    def __init__(self, view: QGraphicsView, size: QSizeF, pos: QPointF = QPointF(0,0)):
         super().__init__()
         view.parent().paletteChanged.connect(self.newPalette)
-        self.setRect(QRectF(-width/2, -height/2, width, height))
+        rect = QRectF(QPointF(-size.width()/2, -size.height()/2), size)
+        self.setRect(rect)
         self.setPos(pos)
 
-        pen = QPen(QColor("red"), 2, Qt.DashLine, c=Qt.RoundCap, j=Qt.RoundJoin)
+        pen = QPen(QColor("red"), 3, Qt.DashLine, c=Qt.RoundCap, j=Qt.RoundJoin)
+        pen.setCosmetic(True)
         pen.setDashPattern([2,2])
         pen.setDashOffset(7)
         self.setPen(pen)
         if logger.isEnabledFor(logging.DEBUG):
             logger.debug('Radiergummi erzeugt.')
 
-    def setSize(self, width: float, height: float):
-        self.setRect(QRectF(-width/2, -height/2, width, height))
+    def setSize(self, size: QSizeF):
+        rect = QRectF(QPointF(-size.width()/2, -size.height()/2), size)
+        self.setRect(rect)
+
+    def size(self) -> QSizeF:
+        return self.rect().size()
 
     def newPalette(self):
         newfgcolor = QApplication.instance().palette().color(QPalette.PlaceholderText)
