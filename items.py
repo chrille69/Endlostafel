@@ -16,7 +16,7 @@
 # along with this program.  If not, see https://www.gnu.org/licenses/.
 
 import logging
-from math import atan2, sqrt, log10
+from math import sqrt, log10
 from PySide6.QtCore import QPointF, QRectF, QSizeF, Qt
 from PySide6.QtGui import QBrush, QColor, QPainterPath, QPalette, QPen, QPixmap
 from PySide6.QtSvgWidgets import QGraphicsSvgItem
@@ -28,11 +28,11 @@ class Pfad(QGraphicsPathItem):
     def __init__(self, view: QGraphicsView, pos: QPointF, pen: QPen, brush: QBrush):
         super().__init__()
         self._view = view
-        self._firstpos = pos
+        self.setPos(pos)
         self._fgcolor = view.fgcolor()
         self.setPen(pen)
         self.setBrush(brush)
-        self.setPath(QPainterPath(pos))
+        self.setPath(QPainterPath())
         self.setFlag(QGraphicsItem.ItemIsMovable, True)
         self.setFlag(QGraphicsItem.ItemIsSelectable, True)
         self.setCacheMode(QGraphicsItem.NoCache)
@@ -70,7 +70,7 @@ class Pfad(QGraphicsPathItem):
         self._shape = shape
 
     def clone(self):
-        clonepfad = Pfad(self._view, self._firstpos, self.pen(), self.brush())
+        clonepfad = Pfad(self._view, self.pos(), self.pen(), self.brush())
         clonepfad.setPath(self.path())
         clonepfad.setPos(self.pos())
         clonepfad.setScale(self.scale())
@@ -79,7 +79,8 @@ class Pfad(QGraphicsPathItem):
             clonepfad.setShape(self._shape)
         return clonepfad
 
-    def removeElements(self, radiererpfad: QPainterPath):
+    def removeElements(self, radiererpfadscene: QPainterPath):
+        radiererpfad = self.mapFromScene(radiererpfadscene)
         neupfad = QPainterPath()
         if self.brush() != Qt.NoBrush:
             # Gefüllte Elemente werden gelöscht.
@@ -88,10 +89,23 @@ class Pfad(QGraphicsPathItem):
         anzahl = self.path().elementCount()
         if anzahl > 1:
             geschnitten = False
-            for i in range(anzahl):
+            i=0
+            while i < anzahl:
                 element = self.path().elementAt(i)
                 pos = QPointF(element.x, element.y)
-                if radiererpfad.contains(self.mapToScene(pos)) and element.type != QPainterPath.CurveToDataElement:
+                cp1 = None
+                cp2 = None
+                if element.isCurveTo():
+                    cp1 = pos
+                    i += 1
+                    de1 = self.path().elementAt(i)
+                    cp2 = QPointF(de1.x,de1.y)
+                    i += 1
+                    de2 = self.path().elementAt(i)
+                    pos = QPointF(de2.x,de2.y)
+                logger.info(f"{i}: {pos}, {element.type}, {cp1} : {cp2}")
+                if radiererpfad.contains(pos) and element.type != QPainterPath.CurveToDataElement:
+                    logger.info("nix")
                     # Dieser Punkt wird nicht gezeichnet
                     geschnitten = True
                 else:
@@ -100,27 +114,24 @@ class Pfad(QGraphicsPathItem):
                     else:
                         if element.isLineTo():
                             neupfad.lineTo(pos)
-                        if element.isCurveTo():
-                            de1 = self.path().elementAt(i+1)
-                            cp1 = QPointF(de1.x,de1.y)
-                            de2 = self.path().elementAt(i+2)
-                            cp2 = QPointF(de2.x,de2.y)
-                            neupfad.cubicTo(pos,cp1,cp2)
+                        elif element.isCurveTo():
+                            neupfad.cubicTo(cp1,cp2,pos)
                         else:
                             neupfad.moveTo(pos)
                     geschnitten=False
+                i += 1
 
         self.setPath(neupfad)
         self.setTransformOriginPoint(self.boundingRect().center())
-
-
+        logger.info("Ende")
 
 
 class Stift(Pfad):
     def __init__(self, view: QGraphicsView, pos: QPointF, pen: QPen, brush: QBrush):
         super().__init__(view, pos, pen, brush)
 
-    def change(self, pos: QPointF):
+    def change(self, posscene: QPointF):
+        pos = self.mapFromScene(posscene)
         path = self.path()
         path.lineTo(pos)
         self.setPath(path)
@@ -131,8 +142,9 @@ class Line(Pfad):
     def __init__(self, view: QGraphicsView, pos: QPointF, pen: QPen, brush: QBrush):
         super().__init__(view, pos, pen, brush)
 
-    def change(self, pos):
-        path = QPainterPath(self._firstpos)
+    def change(self, posscene: QPointF):
+        pos = self.mapFromScene(posscene)
+        path = QPainterPath()
         path.lineTo(pos)
         self.setPath(path)
         super().change()
@@ -142,14 +154,13 @@ class LineSnap(Pfad):
     def __init__(self, view: QGraphicsView, pos: QPointF, pen: QPen, brush: QBrush):
         super().__init__(view, pos, pen, brush)
 
-    def change(self, pos):
-        delta = pos - self._firstpos
-        winkel = atan2(delta.y(),delta.x())*180/3.14
-        newpos = QPointF(self._firstpos.x(), pos.y())
-        if abs(winkel) <= 45 or winkel >= 135 or winkel <= -135:
+    def change(self, posscene: QPointF):
+        pos = self.mapFromScene(posscene)
+        newpos = QPointF(0, pos.y())
+        if abs(pos.y()) <= abs(pos.x()):
             newpos.setX(pos.x())
-            newpos.setY(self._firstpos.y())
-        path = QPainterPath(self._firstpos)
+            newpos.setY(0)
+        path = QPainterPath()
         path.lineTo(newpos)
         self.setPath(path)
         super().change()
@@ -159,10 +170,11 @@ class Pfeil(Pfad):
     def __init__(self, view: QGraphicsView, pos: QPointF, pen: QPen, brush: QBrush):
         super().__init__(view, pos, pen, brush)
 
-    def change(self, pos):
-        path = QPainterPath(self._firstpos)
+    def change(self, posscene: QPointF):
+        pos = self.mapFromScene(posscene)
+        path = QPainterPath()
         path.lineTo(pos)
-        ds = pos - self._firstpos
+        ds = pos
         ds0 = ds/sqrt(ds.x()*ds.x()+ds.y()*ds.y())
         dl0 = QPointF(ds0.y(), -ds0.x())
         lw = self.pen().widthF()
@@ -178,16 +190,15 @@ class PfeilSnap(Pfad):
     def __init__(self, view: QGraphicsView, pos: QPointF, pen: QPen, brush: QBrush):
         super().__init__(view, pos, pen, brush)
 
-    def change(self, pos):
-        delta = pos - self._firstpos
-        winkel = atan2(delta.y(),delta.x())*180/3.14
-        newpos = QPointF(self._firstpos.x(), pos.y())
-        if abs(winkel) <= 45 or winkel >= 135 or winkel <= -135:
+    def change(self, posscene: QPointF):
+        pos = self.mapFromScene(posscene)
+        newpos = QPointF(0, pos.y())
+        if abs(pos.y()) <= abs(pos.x()):
             newpos.setX(pos.x())
-            newpos.setY(self._firstpos.y())
-        path = QPainterPath(self._firstpos)
+            newpos.setY(0)
+        path = QPainterPath()
         path.lineTo(newpos)
-        ds = newpos - self._firstpos
+        ds = newpos
         ds0 = ds/sqrt(ds.x()*ds.x()+ds.y()*ds.y())
         dl0 = QPointF(ds0.y(), -ds0.x())
         lw = self.pen().widthF()
@@ -203,13 +214,13 @@ class Kreis(Pfad):
     def __init__(self, view: QGraphicsView, pos: QPointF, pen: QPen, brush: QBrush):
         super().__init__(view, pos, pen, brush)
     
-    def change(self, pos):
-        path = QPainterPath(self._firstpos)
-        rx = abs(pos.x()-self._firstpos.x())
-        ry = abs(pos.y()-self._firstpos.y())
+    def change(self, posscene: QPointF):
+        pos = self.mapFromScene(posscene)
+        rx = pos.x()
+        ry = pos.y()
         r = sqrt(rx*rx+ry*ry)
-        rect = QRectF(self._firstpos-QPointF(r,r), QSizeF(2*r,2*r))
-        path.moveTo(self._firstpos+QPointF(r,0))
+        rect = QRectF(QPointF(-r,-r), QSizeF(2*r,2*r))
+        path = QPainterPath(QPointF(r,0))
         for winkel in range(0,360,15):
             path.arcTo(rect, winkel, 15)
         self.setPath(path)
@@ -220,12 +231,12 @@ class Ellipse(Pfad):
     def __init__(self, view: QGraphicsView, pos: QPointF, pen: QPen, brush: QBrush):
         super().__init__(view, pos, pen, brush)
 
-    def change(self, pos):
-        path = QPainterPath(self._firstpos)
-        rx = abs(pos.x()-self._firstpos.x())
-        ry = abs(pos.y()-self._firstpos.y())
-        rect = QRectF(self._firstpos-QPointF(rx,ry), QSizeF(2*rx,2*ry))
-        path.moveTo(self._firstpos+QPointF(rx,0))
+    def change(self, posscene: QPointF):
+        pos = self.mapFromScene(posscene)
+        rx = abs(pos.x())
+        ry = abs(pos.y())
+        rect = QRectF(-QPointF(rx,ry), QSizeF(2*rx,2*ry))
+        path = QPainterPath(QPointF(rx,0))
         for winkel in range(0,360,15):
             path.arcTo(rect, winkel, 15)
         self.setPath(path)
@@ -236,15 +247,16 @@ class Quadrat(Pfad):
     def __init__(self, view: QGraphicsView, pos: QPointF, pen: QPen, brush: QBrush):
         super().__init__(view, pos, pen, brush)
 
-    def change(self, pos):
-        dx, dy = (pos - self._firstpos).toTuple()
-        d = max(dx, dy)
+    def change(self, posscene: QPointF):
+        pos = self.mapFromScene(posscene)
+        dx, dy = pos.toTuple()
+        d = max(abs(dx), abs(dy))
         dx = d if dx > 0 else -d
         dy = d if dy > 0 else -d
-        path = QPainterPath(self._firstpos)
-        path.lineTo(self._firstpos.x(),    self._firstpos.y()+dy)
-        path.lineTo(self._firstpos.x()+dx, self._firstpos.y()+dy)
-        path.lineTo(self._firstpos.x()+dx, self._firstpos.y())
+        path = QPainterPath()
+        path.lineTo( 0, dy)
+        path.lineTo(dx, dy)
+        path.lineTo(dx,  0)
         path.closeSubpath()
         self.setPath(path)
         super().change()
@@ -254,12 +266,13 @@ class Rechteck(Pfad):
     def __init__(self, view: QGraphicsView, pos: QPointF, pen: QPen, brush: QBrush):
         super().__init__(view, pos, pen, brush)
 
-    def change(self, pos):
-        (x1, y1), (x2, y2) = self._firstpos.toTuple(), pos.toTuple()
-        path = QPainterPath(self._firstpos)
-        path.lineTo(x1, y2)
+    def change(self, posscene: QPointF):
+        pos = self.mapFromScene(posscene)
+        x2, y2 = pos.toTuple()
+        path = QPainterPath()
+        path.lineTo( 0, y2)
         path.lineTo(x2, y2)
-        path.lineTo(x2,y1)
+        path.lineTo(x2,  0)
         path.closeSubpath()
         self.setPath(path)
         super().change()
@@ -269,7 +282,7 @@ class Punkt(Pfad):
     def __init__(self, view: QGraphicsView, pos: QPointF, pen: QPen, brush: QBrush):
         super().__init__(view, pos, pen, brush)
         path = self.path()
-        path.lineTo(pos*1.0001)
+        path.lineTo(.0001,0)
         self.setPath(path)
         self.change()
 
