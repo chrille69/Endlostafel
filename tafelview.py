@@ -18,13 +18,14 @@
 import logging
 from PySide6 import QtCore
 from PySide6.QtCore import QEvent, QPointF, QRect, QSizeF, Qt, Signal, Slot
-from PySide6.QtGui import QBrush, QColor, QPainter, QPalette, QPen, QResizeEvent, QTransform
+from PySide6.QtGui import QBrush, QColor, QPainter, QPalette, QPen, QResizeEvent
 from PySide6.QtWidgets import QApplication, QGraphicsRectItem, QGraphicsItem, QGraphicsScene, QGraphicsView, QMessageBox, QToolButton, QWidget, QPinchGesture
 
 from icons import getNameCursor, getIconSvg, getItemCursor
 from items import Ellipse, Kreis, Line, LineSnap, Pfad, Pfeil, PfeilSnap, Punkt, Quadrat, Rechteck, Stift
 from geodreieck import Geodreieck
 from radiergummi import Radiergummi
+from undo import AddItem, RemoveItem, ChangePathItems, MoveItem
 
 logger = logging.getLogger('GUI')
 
@@ -35,6 +36,7 @@ class Tafelview(QGraphicsView):
     statusbarinfo = Signal(str, int)
     mousemoved = Signal(QPointF)
     mousereleased = Signal()
+    finishedEdit = Signal()
     kalibriert = Signal(float)
 
     statusFreihand  = 'freihand'
@@ -77,7 +79,6 @@ class Tafelview(QGraphicsView):
         self.setScene(tafel)
         self.setBackgroundBrush(QColor(Qt.transparent))
         self._currentItem: Pfad = None
-        self._redoitems = []
         self._lastPos: QPointF = None
         self._drawpen = QPen(qcolor, pensize, Qt.SolidLine, c=Qt.RoundCap, j=Qt.RoundJoin)
         self._drawpen.setCosmetic(True)
@@ -96,6 +97,7 @@ class Tafelview(QGraphicsView):
         self._countPointsize = 50
         self._bigpointfactor = parent.getBigPointFactor()
         self._verybigpointfactor = parent.getVeryBigPointFactor()
+        self._clonedItems = {}
 
         self.setRenderHint(QPainter.Antialiasing)
         self.setTransformationAnchor(QGraphicsView.NoAnchor)
@@ -107,8 +109,6 @@ class Tafelview(QGraphicsView):
         parent.pensizeChanged.connect(self.setPensize)
         parent.deleteClicked.connect(self.deleteItems)
         parent.copyClicked.connect(self.copyItems)
-        parent.undoClicked.connect(self.undo)
-        parent.redoClicked.connect(self.redo)
         parent.zoominClicked.connect(self.zoomin)
         parent.zoomresetClicked.connect(self.zoomreset)
         parent.zoomoutClicked.connect(self.zoomout)
@@ -262,7 +262,7 @@ class Tafelview(QGraphicsView):
             raise Exception(f'Für den Status "{self._status}" gibt es kein Item.')
 
         if item:
-            self.scene().addItem(item)
+            self.parent().undostack.push(AddItem(self.scene(), item))
         self._currentItem = item
 
     def deleteCurrentItem(self):
@@ -323,7 +323,9 @@ class Tafelview(QGraphicsView):
                     self.scene().addItem(item)
                 elif self._status == Tafelview.statusRadiere:
                     self.radiere(geopos)
-        self._redoitems = []
+        if self._clonedItems:
+            self.parent().undostack.push(ChangePathItems({k: self._clonedItems[k] for k in self._clonedItems}))
+        self._clonedItems = {}
         self._painting = False
         self.setLastPos(None)
         self.mousereleased.emit()
@@ -391,10 +393,14 @@ class Tafelview(QGraphicsView):
         #    logger.debug(f"Status: {self._status}, Painting: {self._painting}")
 
         try:
+            eventtype = event.type()
+
             if self._status == Tafelview.statusEdit:
+                if eventtype in [QEvent.TouchCancel,QEvent.TouchEnd,QEvent.MouseButtonRelease]:
+                    self.finishedEdit.emit()
+                    self.parent().undostack.push(MoveItem(None,QPointF(), QPointF()))
                 return super().viewportEvent(event)
 
-            eventtype = event.type()
             if eventtype == QEvent.Gesture:
                 gesture = event.gesture(Qt.PinchGesture)
                 if gesture and not self._tmpStatus:
@@ -460,6 +466,10 @@ class Tafelview(QGraphicsView):
         except Exception as e:
             logger.exception(e, exc_info=True)
 
+    def resizeEvent(self, event: QResizeEvent):
+        self.resized.emit()
+        return super().resizeEvent(event)
+
     def kalibrierePointSize(self, pointsize):
         if self._kalibriere:
             if self._countPointsize < 50:
@@ -486,9 +496,11 @@ class Tafelview(QGraphicsView):
         radierpath = QGraphicsRectItem(self._radiergummi.sceneBoundingRect()).shape()
         for item in self.scene().items(radierpath):
             if hasattr(item,'removeElements') and callable(item.removeElements):
+                if item not in self._clonedItems:
+                    self._clonedItems[item] = item.clone()
                 item.removeElements(radierpath)
             if hasattr(item,'path') and callable(item.path) and item.path().elementCount() < 2:
-                self.scene().removeItem(item)
+                self.parent().undostack.push(RemoveItem(self.scene(), item))
 
     def berechneSceneRectNeu(self, item: QGraphicsItem):
         # Mögliche Erweiterung des sceneRect berechnen
@@ -527,8 +539,7 @@ class Tafelview(QGraphicsView):
         for item in self.scene().selectedItems():
             if item == self._geodreieck:
                 continue
-            self._redoitems.append(item)
-            self.scene().removeItem(item)
+            self.parent().undostack.push(RemoveItem(self.scene(),item))
         self.eswurdegemalt.emit()
 
     @Slot()
@@ -537,6 +548,7 @@ class Tafelview(QGraphicsView):
             QMessageBox.warning(self, 'Hinweis', 'Bitte wählen Sie Elemente aus.')
             return
 
+        self.parent().undostack.beginMacro('Kopiere Elemente')
         funktioniert_nicht = False
         for item in self.scene().selectedItems():
             try:
@@ -545,8 +557,10 @@ class Tafelview(QGraphicsView):
                 self.statusbarinfo.emit('Einige Elemente konnten nicht kopiert werden',1000) # funktioniert nicht
                 funktioniert_nicht = True
                 continue
-            self.scene().addItem(newitem)
-            newitem.stackBefore(item)
+            self.parent().undostack.push(AddItem(self.scene(),newitem))
+            newitem.setSelected(True)
+            item.setSelected(False)
+        self.parent().undostack.endMacro()
         self.eswurdegemalt.emit()
         if not funktioniert_nicht:
             self.statusbarinfo.emit('Die Elemente sind kopiert. Bitte jetzt verschieben...',5000)
@@ -588,24 +602,6 @@ class Tafelview(QGraphicsView):
                 scenerect.setRight(viewrect.right() + offset)
                 self.setSceneRect(scenerect)
             self.translate(-offset, 0)
-
-    @Slot()
-    def undo(self):
-        items = self.scene().items()
-        for item in items:
-            if item in [self._geodreieck,self._drehgriff, self._schiebegriff]:
-                continue
-            self._redoitems.append(item)
-            self.scene().removeItem(item)
-            break
-        self.eswurdegemalt.emit()
-
-    @Slot()
-    def redo(self):
-        if self._redoitems:
-            item = self._redoitems.pop()
-            self.scene().addItem(item)
-        self.eswurdegemalt.emit()
 
     @Slot()
     def zoomin(self):
@@ -651,14 +647,13 @@ class Tafelview(QGraphicsView):
         if self._geodreieck.scene():
             geodreiecksichtbar = True
             self.scene().removeItem(self._geodreieck)
-        self.scene().clear()
+        self.parent().undostack.beginMacro('Lösche alles')
+        for item in self.scene().items():
+            self.parent().undostack.push(RemoveItem(self.scene(),item))
+        self.parent().undostack.endMacro()
         if geodreiecksichtbar:
             self.scene().addItem(self._geodreieck)
         self.eswurdegemalt.emit()
-
-    def resizeEvent(self, event: QResizeEvent):
-        self.resized.emit()
-        return super().resizeEvent(event)
 
     @Slot()
     def changeSceneRect(self):

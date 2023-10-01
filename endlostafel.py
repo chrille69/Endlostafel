@@ -21,9 +21,9 @@ from functools import partial
 from argparse import ArgumentParser
 from typing import IO
 
-from PySide6.QtCore import QEvent, QLocale, QMarginsF, QSettings, QDate, QTime, QTimer, Qt, Signal
+from PySide6.QtCore import QEvent, QLocale, QMarginsF, QSettings, QDate, QTime, QTimer, Qt, Signal, Slot
 from PySide6.QtSvg import QSvgGenerator
-from PySide6.QtGui import QAction, QActionGroup, QCloseEvent, QColor, QGuiApplication, QPainter, QPixmap, QPalette, QFont
+from PySide6.QtGui import QAction, QActionGroup, QCloseEvent, QColor, QGuiApplication, QPainter, QPixmap, QPalette, QFont, QUndoStack
 from PySide6.QtWidgets import QApplication, QFileDialog, QGraphicsItem, QGraphicsTextItem, QLabel, QMainWindow, QMenu, QMessageBox, QSizePolicy, QToolBar, QToolButton, QWidget, QWidgetAction, QColorDialog
 
 
@@ -37,7 +37,7 @@ from logwindow import LogWindowHandler, LogWindow
 # Zum Erzeugen der exe:
 # pyinstaller.exe -F -i "oszli-icon.ico" -w endlostafel.py
 
-VERSION='2.11'
+VERSION='2.12'
 
 
 class Editor(QMainWindow):
@@ -47,8 +47,6 @@ class Editor(QMainWindow):
     pensizeChanged = Signal(float)
     deleteClicked = Signal()
     copyClicked = Signal()
-    undoClicked = Signal()
-    redoClicked = Signal()
     zoominClicked = Signal()
     zoomoutClicked = Signal()
     zoomresetClicked = Signal()
@@ -69,6 +67,7 @@ class Editor(QMainWindow):
         self.logwindow = LogWindow(self)
         self._ungespeichert = False
         uhr = Uhr(self)
+        self.undostack = QUndoStack(self)
 
         isdarkmode = False if self._settings.value("editor/darkmode", False) == 'false' else True
         QApplication.setPalette(paletteDark if isdarkmode else paletteLight)
@@ -150,8 +149,10 @@ class Editor(QMainWindow):
 
         self._deleteAction     = Action(       'delete', 'Löschen', self)
         self._copyAction       = Action(         'copy', 'Kopieren', self)
-        undoAction             = Action(         'undo', 'Undo', self)
-        redoAction             = Action(         'redo', 'Redo', self)
+        undoAction             = self.undostack.createUndoAction(self)
+        undoAction.setIcon(getIconSvg('undo'))
+        redoAction             = self.undostack.createRedoAction(self)
+        redoAction.setIcon(getIconSvg('redo'))
         speichernAction        = Action(         'save', 'Speichern', self)
         ladenAction            = Action(         'open', 'Laden', self)
         saveSettingsAction     = Action(        'prefs', 'Einstellungen (Farbe, Stiftgröße, Palette) speichern', self)
@@ -251,15 +252,13 @@ class Editor(QMainWindow):
 
         self._deleteAction.triggered.connect(self.deleteClicked.emit)
         self._copyAction.triggered.connect(self.copyClicked.emit)
-        undoAction.triggered.connect(self.undoClicked.emit)
-        redoAction.triggered.connect(self.redoClicked.emit)
         speichernAction.triggered.connect(self.speichern)
         ladenAction.triggered.connect(self.laden)
         saveSettingsAction.triggered.connect(self.einstellungenSpeichern)
         zoomoutAction.triggered.connect(self.zoomoutClicked.emit)
         zoomorigAction.triggered.connect(self.zoomresetClicked.emit)
         zoominAction.triggered.connect(self.zoominClicked.emit)
-        clearAction.triggered.connect(self.clearall)
+        clearAction.triggered.connect(self.clearClicked.emit)
         geodreieckAction.triggered.connect(lambda: self.geodreieckClick.emit(geodreieckAction.isChecked()))
         self._fullscreenAction.triggered.connect(lambda: self.fullScreen(self._fullscreenAction.isChecked()))
         exitAction.triggered.connect(self.close)
@@ -344,11 +343,6 @@ class Editor(QMainWindow):
         anzahl = len(self._tafelview.scene().items())
         self._speicherlabel.setText(f'{anzahl} Element' + ('' if anzahl == 1 else 'e') )
 
-    def clearall(self):
-        if self.ungespeichertFortfahren('Trotzdem alles löschen'):
-            self.clearClicked.emit()
-            self._ungespeichert = False
-
     def ungespeichertFortfahren(self, text: str):
         if self._ungespeichert:
             mb = QMessageBox()
@@ -394,6 +388,7 @@ class Editor(QMainWindow):
 
         self.newstatus.emit(status)
 
+    @Slot(str,int)
     def statusbarinfo(self, txt, timeout):
         self.statusBar().showMessage(txt,timeout)
 

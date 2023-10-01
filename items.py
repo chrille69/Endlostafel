@@ -17,10 +17,13 @@
 
 import logging
 from math import sqrt, log10
+from typing import Any
 from PySide6.QtCore import QPointF, QRectF, QSizeF, Qt
 from PySide6.QtGui import QBrush, QColor, QPainterPath, QPalette, QPen, QPixmap
 from PySide6.QtSvgWidgets import QGraphicsSvgItem
 from PySide6.QtWidgets import QApplication, QGraphicsItem, QGraphicsLineItem, QGraphicsPathItem, QGraphicsPixmapItem, QGraphicsRectItem, QGraphicsView
+
+from undo import MoveItem
 
 logger = logging.getLogger('GUI')
 
@@ -35,11 +38,14 @@ class Pfad(QGraphicsPathItem):
         self.setPath(QPainterPath())
         self.setFlag(QGraphicsItem.ItemIsMovable, True)
         self.setFlag(QGraphicsItem.ItemIsSelectable, True)
+        self.setFlag(QGraphicsItem.ItemSendsGeometryChanges, True)
         self.setCacheMode(QGraphicsItem.NoCache)
         view.mousemoved.connect(self.change)
         view.mousereleased.connect(self.disconnect)
+        view.finishedEdit.connect(self.registerPosition)
         view.parent().paletteChanged.connect(self.newPalette)
         self._shape = None
+        self._oldpos = None
 
     def newPalette(self):
         newfgcolor = QApplication.instance().palette().color(QPalette.WindowText)
@@ -59,6 +65,11 @@ class Pfad(QGraphicsPathItem):
 
     def change(self):
         self.setTransformOriginPoint(self.boundingRect().center())
+
+    def registerPosition(self):
+        if self._oldpos:
+            self._view.parent().undostack.push(MoveItem(self, QPointF(self._oldpos), QPointF(self.pos())))
+            self._oldpos = None
 
     def shape(self):
         if self._shape:
@@ -103,9 +114,8 @@ class Pfad(QGraphicsPathItem):
                     i += 1
                     de2 = self.path().elementAt(i)
                     pos = QPointF(de2.x,de2.y)
-                logger.info(f"{i}: {pos}, {element.type}, {cp1} : {cp2}")
+                #logger.info(f"{i}: {pos}, {element.type}, {cp1} : {cp2}")
                 if radiererpfad.contains(pos) and element.type != QPainterPath.CurveToDataElement:
-                    logger.info("nix")
                     # Dieser Punkt wird nicht gezeichnet
                     geschnitten = True
                 else:
@@ -123,7 +133,12 @@ class Pfad(QGraphicsPathItem):
 
         self.setPath(neupfad)
         self.setTransformOriginPoint(self.boundingRect().center())
-        logger.info("Ende")
+
+    def itemChange(self, change: QGraphicsItem.GraphicsItemChange, value: Any) -> Any:
+        if change == QGraphicsItem.ItemPositionChange:
+            if not self._oldpos:
+                self._oldpos = self.pos()
+        return super().itemChange(change, value)
 
 
 class Stift(Pfad):
