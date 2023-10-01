@@ -36,7 +36,7 @@ class Tafelview(QGraphicsView):
     statusbarinfo = Signal(str, int)
     mousemoved = Signal(QPointF)
     mousereleased = Signal()
-    finishedEdit = Signal()
+    finishedEdit = Signal(QWidget)
     kalibriert = Signal(float)
 
     statusFreihand  = 'freihand'
@@ -320,7 +320,8 @@ class Tafelview(QGraphicsView):
             if geopos == self._lastPos or not self._painting:   # MouseClick
                 if self._status == Tafelview.statusFreihand:
                     item = Punkt(self,geopos,self._currentpen,self._currentbrush)
-                    self.scene().addItem(item)
+                    self.parent().undostack.undo()
+                    self.parent().undostack.push(AddItem(self.scene(), item))
                 elif self._status == Tafelview.statusRadiere:
                     self.radiere(geopos)
         if self._clonedItems:
@@ -397,7 +398,7 @@ class Tafelview(QGraphicsView):
 
             if self._status == Tafelview.statusEdit:
                 if eventtype in [QEvent.TouchCancel,QEvent.TouchEnd,QEvent.MouseButtonRelease]:
-                    self.finishedEdit.emit()
+                    self.finishedEdit.emit(self.parent())
                     self.parent().undostack.push(MoveItem(None,QPointF(), QPointF()))
                 return super().viewportEvent(event)
 
@@ -567,8 +568,10 @@ class Tafelview(QGraphicsView):
 
     @Slot(QGraphicsItem)
     def importItem(self, item: QGraphicsItem):
-        self.scene().addItem(item)
+        self.parent().undostack.push(AddItem(self.scene(), item))
         item.setPos(self.mapToScene(0,0))
+        if hasattr(item, 'registerPosition'):
+            self.finishedEdit.connect(item.registerPosition)
         self.berechneSceneRectNeu(item)
 
         self.statusbarinfo.emit('Das Element oben links eingefügt. Bitte jetzt verschieben...',5000)

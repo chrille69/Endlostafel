@@ -18,7 +18,7 @@
 import logging
 from math import sqrt, log10
 from typing import Any
-from PySide6.QtCore import QPointF, QRectF, QSizeF, Qt
+from PySide6.QtCore import QPointF, QRectF, QSizeF, Qt, Slot
 from PySide6.QtGui import QBrush, QColor, QPainterPath, QPalette, QPen, QPixmap
 from PySide6.QtSvgWidgets import QGraphicsSvgItem
 from PySide6.QtWidgets import QApplication, QGraphicsItem, QGraphicsLineItem, QGraphicsPathItem, QGraphicsPixmapItem, QGraphicsRectItem, QGraphicsView
@@ -66,9 +66,9 @@ class Pfad(QGraphicsPathItem):
     def change(self):
         self.setTransformOriginPoint(self.boundingRect().center())
 
-    def registerPosition(self):
+    def registerPosition(self, app):
         if self._oldpos:
-            self._view.parent().undostack.push(MoveItem(self, QPointF(self._oldpos), QPointF(self.pos())))
+            app.undostack.push(MoveItem(self, QPointF(self._oldpos), QPointF(self.pos())))
             self._oldpos = None
 
     def shape(self):
@@ -89,6 +89,12 @@ class Pfad(QGraphicsPathItem):
         if self._shape:
             clonepfad.setShape(self._shape)
         return clonepfad
+
+    def itemChange(self, change: QGraphicsItem.GraphicsItemChange, value: Any) -> Any:
+        if change == QGraphicsItem.ItemPositionChange:
+            if not self._oldpos:
+                self._oldpos = self.pos()
+        return super().itemChange(change, value)
 
     def removeElements(self, radiererpfadscene: QPainterPath):
         radiererpfad = self.mapFromScene(radiererpfadscene)
@@ -133,12 +139,6 @@ class Pfad(QGraphicsPathItem):
 
         self.setPath(neupfad)
         self.setTransformOriginPoint(self.boundingRect().center())
-
-    def itemChange(self, change: QGraphicsItem.GraphicsItemChange, value: Any) -> Any:
-        if change == QGraphicsItem.ItemPositionChange:
-            if not self._oldpos:
-                self._oldpos = self.pos()
-        return super().itemChange(change, value)
 
 
 class Stift(Pfad):
@@ -443,12 +443,25 @@ class Pixelbild(QGraphicsPixmapItem):
         self.setTransformOriginPoint(self.boundingRect().center())
         self.setFlag(QGraphicsItem.ItemIsMovable, True)
         self.setFlag(QGraphicsItem.ItemIsSelectable, True)
+        self.setFlag(QGraphicsItem.ItemSendsGeometryChanges, True)
+        self._oldpos = None
 
     def clone(self):
         pixmap = Pixelbild(self.pixmap())
         pixmap.setPos(self.pos())
         pixmap.setScale(self.scale())
         return pixmap
+
+    def itemChange(self, change: QGraphicsItem.GraphicsItemChange, value: Any) -> Any:
+        if change == QGraphicsItem.ItemPositionChange:
+            if not self._oldpos:
+                self._oldpos = self.pos()
+        return super().itemChange(change, value)
+
+    def registerPosition(self, app):
+        if self._oldpos:
+            app.undostack.push(MoveItem(self, QPointF(self._oldpos), QPointF(self.pos())))
+            self._oldpos = None
 
 
 class SVGBild(QGraphicsSvgItem):
@@ -457,6 +470,8 @@ class SVGBild(QGraphicsSvgItem):
         self.setTransformOriginPoint(self.boundingRect().center())
         self.setFlag(QGraphicsItem.ItemIsMovable, True)
         self.setFlag(QGraphicsItem.ItemIsSelectable, True)
+        self.setFlag(QGraphicsItem.ItemSendsGeometryChanges, True)
+        self._oldpos = None
 
     def clone(self):
         newitem = QGraphicsSvgItem()
@@ -467,3 +482,14 @@ class SVGBild(QGraphicsSvgItem):
         newitem.setFlag(QGraphicsItem.ItemIsMovable, True)
         newitem.setFlag(QGraphicsItem.ItemIsSelectable, True)
         return newitem
+
+    def itemChange(self, change: QGraphicsItem.GraphicsItemChange, value: Any) -> Any:
+        if change == QGraphicsItem.ItemPositionChange:
+            if not self._oldpos:
+                self._oldpos = self.pos()
+        return super().itemChange(change, value)
+
+    def registerPosition(self, app):
+        if self._oldpos:
+            app.undostack.push(MoveItem(self, QPointF(self._oldpos), QPointF(self.pos())))
+            self._oldpos = None

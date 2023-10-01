@@ -43,11 +43,9 @@ class RemoveItem(QUndoCommand):
         self.setText('Element entfernt')
 
     def undo(self):
-        logger.debug(f"undo: {self._item} in {self._scene}")
         self._scene.addItem(self._item)
     
     def redo(self):
-        logger.debug(f"redo: {self._item} in {self._scene}")
         self._scene.removeItem(self._item)
 
 class ChangePathItems(QUndoCommand):
@@ -59,12 +57,12 @@ class ChangePathItems(QUndoCommand):
         self.setText('Elemente geändert')
 
     def undo(self):
-        for orig in self._itemsPaths:
-            orig.setPath(self._itemsPaths[orig][1])
+        for orig, paths in self._itemsPaths.items():
+            orig.setPath(paths[1])
     
     def redo(self):
-        for orig in self._itemsPaths:
-            orig.setPath(self._itemsPaths[orig][0])
+        for orig, paths in self._itemsPaths.items():
+            orig.setPath(paths[0])
 
 class MoveItem(QUndoCommand):
     def __init__(self, item: QGraphicsItem, oldpos: QPointF, newpos: QPointF):
@@ -94,10 +92,10 @@ class MoveItem(QUndoCommand):
         return True
     
     def undo(self):
-        for item in self._items:
-            item.setPos(self._items[item][0])
+        for item, positions in self._items.items():
+            item.setPos(positions[0])
     
     def redo(self):
-        for item in self._items:
-            item.setPos(self._items[item][1])
+        for item, positions in self._items.items():
+            item.setPos(positions[1])
 
