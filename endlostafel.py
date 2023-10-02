@@ -23,7 +23,7 @@ from typing import IO
 
 from PySide6.QtCore import QEvent, QLocale, QMarginsF, QSettings, QDate, QTime, QTimer, Qt, Signal, Slot
 from PySide6.QtSvg import QSvgGenerator
-from PySide6.QtGui import QAction, QActionGroup, QCloseEvent, QColor, QGuiApplication, QPainter, QPixmap, QPalette, QFont, QUndoStack, QIcon
+from PySide6.QtGui import QAction, QActionGroup, QCloseEvent, QColor, QGuiApplication, QPainter, QPixmap, QPalette, QFont, QUndoStack
 from PySide6.QtWidgets import QApplication, QFileDialog, QGraphicsItem, QGraphicsTextItem, QLabel, QMainWindow, QMenu, QMessageBox, QSizePolicy, QToolBar, QToolButton, QWidget, QWidgetAction, QColorDialog, QUndoView
 
 

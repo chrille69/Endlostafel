@@ -18,7 +18,7 @@
 import logging
 from math import sqrt, log10
 from typing import Any
-from PySide6.QtCore import QPointF, QRectF, QSizeF, Qt, Slot
+from PySide6.QtCore import QPointF, QRectF, QSizeF, Qt
 from PySide6.QtGui import QBrush, QColor, QPainterPath, QPalette, QPen, QPixmap
 from PySide6.QtSvgWidgets import QGraphicsSvgItem
 from PySide6.QtWidgets import QApplication, QGraphicsItem, QGraphicsLineItem, QGraphicsPathItem, QGraphicsPixmapItem, QGraphicsRectItem, QGraphicsView
