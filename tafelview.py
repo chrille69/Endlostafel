@@ -21,7 +21,7 @@ from PySide6.QtCore import QEvent, QPointF, QRect, QSizeF, Qt, Signal, Slot
 from PySide6.QtGui import QBrush, QColor, QPainter, QPalette, QPen, QResizeEvent
 from PySide6.QtWidgets import QApplication, QGraphicsRectItem, QGraphicsItem, QGraphicsScene, QGraphicsView, QMessageBox, QToolButton, QWidget, QPinchGesture
 
-from icons import getNameCursor, getIconSvg, getItemCursor
+from icons import SVGCursor, SVGIcon, ItemCursor
 from items import Ellipse, Kreis, Line, LineSnap, Pfad, Pfeil, PfeilSnap, Punkt, Quadrat, Rechteck, Stift
 from geodreieck import Geodreieck
 from radiergummi import Radiergummi
@@ -182,25 +182,25 @@ class Tafelview(QGraphicsView):
 
     def initCursor(self):
         return {
-            Tafelview.statusFreihand : getNameCursor(    'stift'),
-            Tafelview.statusLinie    : getNameCursor(    'linie'),
-            Tafelview.statusPfeil    : getNameCursor(    'pfeil'),
-            Tafelview.statusLinieS   : getNameCursor(    'linie'),
-            Tafelview.statusPfeilS   : getNameCursor(    'pfeil'),
-            Tafelview.statusQuadrat  : getNameCursor(  'quadrat'),
-            Tafelview.statusKreis    : getNameCursor(    'kreis'),
-            Tafelview.statusRechteck : getNameCursor( 'rechteck'),
-            Tafelview.statusEllipse  : getNameCursor(  'ellipse'),
-            Tafelview.statusQuadratF : getNameCursor( 'quadratf'),
-            Tafelview.statusKreisF   : getNameCursor(   'kreisf'),
-            Tafelview.statusRechteckF: getNameCursor('rechteckf'),
-            Tafelview.statusEllipseF : getNameCursor( 'ellipsef'),
-            Tafelview.statusEdit     : getNameCursor(     'edit')
+            Tafelview.statusFreihand : SVGCursor(    'stift'),
+            Tafelview.statusLinie    : SVGCursor(    'linie'),
+            Tafelview.statusPfeil    : SVGCursor(    'pfeil'),
+            Tafelview.statusLinieS   : SVGCursor(    'linie'),
+            Tafelview.statusPfeilS   : SVGCursor(    'pfeil'),
+            Tafelview.statusQuadrat  : SVGCursor(  'quadrat'),
+            Tafelview.statusKreis    : SVGCursor(    'kreis'),
+            Tafelview.statusRechteck : SVGCursor( 'rechteck'),
+            Tafelview.statusEllipse  : SVGCursor(  'ellipse'),
+            Tafelview.statusQuadratF : SVGCursor( 'quadratf'),
+            Tafelview.statusKreisF   : SVGCursor(   'kreisf'),
+            Tafelview.statusRechteckF: SVGCursor('rechteckf'),
+            Tafelview.statusEllipseF : SVGCursor( 'ellipsef'),
+            Tafelview.statusEdit     : SVGCursor(     'edit')
         }
 
     def setCustomCursor(self):
         if self._status == Tafelview.statusRadiere:
-            cursor = getItemCursor(self._radiergummi, self.transform().m11(), -1, -1)
+            cursor = ItemCursor(self._radiergummi, self.transform().m11(), -1, -1)
         else:
             cursor = self._status2cursor[self._status]
         self.viewport().setCursor(cursor)
@@ -399,7 +399,7 @@ class Tafelview(QGraphicsView):
             if self._status == Tafelview.statusEdit:
                 if eventtype in [QEvent.TouchCancel,QEvent.TouchEnd,QEvent.MouseButtonRelease]:
                     self.finishedEdit.emit(self.parent())
-                    self.parent().undostack.push(MoveItem(None,QPointF(), QPointF()))
+                    self.parent().undostack.push(MoveItem(None, QPointF(), QPointF()))
                 return super().viewportEvent(event)
 
             if eventtype == QEvent.Gesture:
@@ -681,7 +681,7 @@ class erweiternButton(QToolButton):
     def __init__(self, richtung: str, parent: QWidget):
         super().__init__(parent)
         self._richtung = richtung
-        self.setIcon(getIconSvg('go-'+richtung))
+        self.setIcon(SVGIcon('go-'+richtung))
         self.setToolTip('Seite erweitern')
         self.clicked.connect(lambda: self.erweitert.emit(self._richtung))
         self.setCursor(Qt.ArrowCursor)
@@ -689,7 +689,7 @@ class erweiternButton(QToolButton):
 
     @Slot()
     def newPalette(self):
-        self.setIcon(getIconSvg('go-'+self._richtung))
+        self.setIcon(SVGIcon('go-'+self._richtung))
 
     @Slot()
     def moveToSide(self):

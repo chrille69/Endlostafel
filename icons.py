@@ -17,83 +17,99 @@
 
 import logging
 
-from PySide6.QtCore import QByteArray
+from PySide6.QtCore import QByteArray, QSize
 from PySide6.QtGui import QColor, QCursor, QImage, QPainter, QPalette, QPixmap, QIcon
 from PySide6.QtSvg import QSvgRenderer
 from PySide6.QtWidgets import QApplication, QGraphicsItem, QStyleOptionGraphicsItem
 
 logger = logging.getLogger('GUI')
 
-def getImageSvg(name, status=QIcon.Normal):
 
-    palette = QApplication.instance().palette()
-    if status == QIcon.Disabled:
-        color = palette.color(QPalette.Disabled, QPalette.PlaceholderText)
-    else:
+class SVGImage(QImage):
+    def __init__(self, name: str, width: int, htmlcolor: str):
+        super().__init__(QSize(width, width), QImage.Format_ARGB32)
+        svgstr = iconssvg[name if name in iconssvg else 'help']
+        svg = QSvgRenderer(QByteArray(svgstr.format(htmlcolor=htmlcolor)))
+        self.fill(0)
+        painter = QPainter()
+        painter.begin(self)
+        svg.render(painter)
+        painter.end()
+
+
+class ItemCursor(QCursor):
+    def __init__(self, item: QGraphicsItem, scale: float, hotx: int, hoty: int):
+        img = QImage(item.boundingRect().size().toSize()*scale, QImage.Format_ARGB32)
+        img.fill(0)
+        painter = QPainter()
+        painter.begin(img)
+        painter.scale(scale,scale)
+        painter.translate(-item.boundingRect().topLeft())
+        item.paint(painter, QStyleOptionGraphicsItem())
+        painter.end()
+        super().__init__(QPixmap(img), hotx, hoty)
+
+
+class SVGCursor(QCursor):
+    def __init__(self, name: str, width: float=32):
+        name2hotspot = {
+            'stift'    : [0, 32],
+            'linie'    : [5, 5],
+            'pfeil'    : [5, 5],
+            'quadrat'  : [4, 4],
+            'rechteck' : [4, 10],
+            'ellipse'  : [-1, -1],
+            'kreis'    : [-1, -1],
+            'quadratf' : [4, 4],
+            'rechteckf': [4, 10],
+            'ellipsef' : [-1, -1],
+            'kreisf'   : [-1, -1],
+            'radierer' : [11.5, 32],
+            'ereaser'  : [-1,-1],
+            'edit'     : [3, 3]
+        }
+
+        if name in name2hotspot:
+            x, y = name2hotspot[name]
+        else:
+            name, x, y = 'help', -1, -1 # Fragezeichen als SVG-String
+
+        palette = QApplication.instance().palette()
         color = palette.color(QPalette.PlaceholderText)
-    htmlcolor = color.name()
+        htmlcolor = color.name()
+        super().__init__(QPixmap(SVGImage(name, width, htmlcolor)), x, y)
 
-    svgname = iconssvg['help'].format(htmlcolor=htmlcolor) # Fragezeichen als SVG-String
-    if name in iconssvg:
-        svgname = iconssvg[name].format(htmlcolor=htmlcolor)
 
-    svg = QSvgRenderer(QByteArray(svgname))
-    img = QImage(256, 256, QImage.Format_ARGB32)
-    img.fill(0)
-    painter = QPainter()
+class ColorIcon(QIcon):
+    def __init__(self, qcolor: QColor):
+        pixmap=QPixmap(32,32)
+        pixmap.fill(qcolor)
+        super().__init__(pixmap)
 
-    painter.begin(img)
-    svg.render(painter)
-    painter.end()
-    return img
 
-def getItemCursor(item: QGraphicsItem, scale, hotx, hoty):
+class SVGIcon(QIcon):
+    def __init__(self, name: str):
+        super().__init__()
+        self._name = name
+        self._svgstr = iconssvg[name if name in iconssvg else 'help']
+        self.addPixmap(self.paintPixmap(QIcon.Normal), QIcon.Normal)
+        self.addPixmap(self.paintPixmap(QIcon.Disabled), QIcon.Disabled)
 
-    img = QImage(item.boundingRect().size().toSize()*scale, QImage.Format_ARGB32)
-    img.fill(0)
-    painter = QPainter()
-    painter.begin(img)
-    painter.scale(scale,scale)
-    painter.translate(-item.boundingRect().topLeft())
-    item.paint(painter, QStyleOptionGraphicsItem())
-    painter.end()
-    return QCursor(QPixmap(img), hotx, hoty)
+    def newPalette(self):
+        logger.debug(QApplication.instance().palette().color(QPalette.PlaceholderText))
+        self.swap(SVGIcon(self._name))
 
-def getNameCursor(name, width: float=32):
-    name2hotspot = {
-        'stift'    : [0, 32],
-        'linie'    : [5, 5],
-        'pfeil'    : [5, 5],
-        'quadrat'  : [4, 4],
-        'rechteck' : [4, 10],
-        'ellipse'  : [-1, -1],
-        'kreis'    : [-1, -1],
-        'quadratf' : [4, 4],
-        'rechteckf': [4, 10],
-        'ellipsef' : [-1, -1],
-        'kreisf'   : [-1, -1],
-        'radierer' : [11.5, 32],
-        'ereaser'  : [-1,-1],
-        'edit'     : [3, 3]
-    }
-    
-    if name in name2hotspot:
-        x, y = name2hotspot[name]
-    else:
-        name, x, y = 'help', -1, -1 # Fragezeichen als SVG-String
+    def paintPixmap(self, mode: QIcon.Mode):
+        palette = QApplication.instance().palette()
+        if mode == QIcon.Disabled:
+            color = palette.color(QPalette.Disabled, QPalette.PlaceholderText)
+        else:
+            color = palette.color(QPalette.PlaceholderText)
+        htmlcolor = color.name()
+        return QPixmap(SVGImage(self._name, 32, htmlcolor))
 
-    img = getImageSvg(name)
-    return QCursor(QPixmap(img.scaledToWidth(width)), x, y)
 
-def getIconColor(qcolor: QColor):
-    pixmap=QPixmap(32,32)
-    pixmap.fill(qcolor)
-    return QIcon(pixmap)
 
-def getIconSvg(name: str):
-    icon = QIcon(QPixmap(getImageSvg(name)))
-    icon.addPixmap(QPixmap(getImageSvg(name, QIcon.Disabled)), QIcon.Disabled)
-    return icon
 
 
 iconssvg = {
@@ -281,6 +297,14 @@ iconssvg = {
         <svg id="svg6" width="16" height="16" version="1.1" xmlns="http://www.w3.org/2000/svg">
             <path style="fill:none;stroke-width:1.0352px;stroke:{htmlcolor}" id="halbkreis" d="m11.13 4.908a4.3996 4.3996 0 01-.0125 6.2213 4.3996 4.3996 0 01-6.2213-.01135"/>
             <path style="fill:none;stroke-width:1.0352px;stroke:{htmlcolor}" id="dreieck" d="m1.5425 14.482h12.94v-12.94z"/>
+        </svg>''',
+    'toolbaricon': '''<svg width="11.213mm" height="11.213mm" version="1.1" viewBox="0 0 11.213 11.213" xml:space="preserve"
+            xmlns="http://www.w3.org/2000/svg" fill="{htmlcolor}">
+            <g transform="translate(-6.6934 -6.3154)">
+                <path
+                    d="m7.7856 6.3154-1.0922.98974 4.184 4.6164-4.184 4.6176 1.0922.98974 5.0809-5.6073zm5.04 0-1.0922.98974 4.184 4.6164-4.184 4.6176 1.0922.98974 5.0809-5.6073z"
+                    style="fill-rule:evenodd;opacity:.992;stroke-width:.29104" />
+            </g>
         </svg>''',
     'oszli': '''
         <svg width="281" height="291" version="1.1" viewBox="0 0 281 291" xmlns="http://www.w3.org/2000/svg">

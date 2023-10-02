@@ -23,16 +23,17 @@ from typing import IO
 
 from PySide6.QtCore import QEvent, QLocale, QMarginsF, QSettings, QDate, QTime, QTimer, Qt, Signal, Slot
 from PySide6.QtSvg import QSvgGenerator
-from PySide6.QtGui import QAction, QActionGroup, QCloseEvent, QColor, QGuiApplication, QPainter, QPixmap, QPalette, QFont, QUndoStack
-from PySide6.QtWidgets import QApplication, QFileDialog, QGraphicsItem, QGraphicsTextItem, QLabel, QMainWindow, QMenu, QMessageBox, QSizePolicy, QToolBar, QToolButton, QWidget, QWidgetAction, QColorDialog
+from PySide6.QtGui import QAction, QActionGroup, QCloseEvent, QColor, QGuiApplication, QPainter, QPixmap, QPalette, QFont, QUndoStack, QIcon
+from PySide6.QtWidgets import QApplication, QFileDialog, QGraphicsItem, QGraphicsTextItem, QLabel, QMainWindow, QMenu, QMessageBox, QSizePolicy, QToolBar, QToolButton, QWidget, QWidgetAction, QColorDialog, QUndoView
 
 
-from icons import getIconColor, getIconSvg
+from icons import ColorIcon, SVGIcon
 from items import Pixelbild, SVGBild, Karopapier, Linienpapier
 from vordrucke import MmLogDialog
 from tafelview import Tafelview
 from paletten import dark as paletteDark, light as paletteLight
 from logwindow import LogWindowHandler, LogWindow
+from undo import UndoWindow
 
 # Zum Erzeugen der exe:
 # pyinstaller.exe -F -i "oszli-icon.ico" -w endlostafel.py
@@ -149,10 +150,8 @@ class Editor(QMainWindow):
 
         self._deleteAction     = Action(       'delete', 'Löschen', self)
         self._copyAction       = Action(         'copy', 'Kopieren', self)
-        undoAction             = self.undostack.createUndoAction(self)
-        undoAction.setIcon(getIconSvg('undo'))
-        redoAction             = self.undostack.createRedoAction(self)
-        redoAction.setIcon(getIconSvg('redo'))
+        self._undoAction             = self.undostack.createUndoAction(self)
+        self._redoAction             = self.undostack.createRedoAction(self)
         speichernAction        = Action(         'save', 'Speichern', self)
         ladenAction            = Action(         'open', 'Laden', self)
         saveSettingsAction     = Action(        'prefs', 'Einstellungen (Farbe, Stiftgröße, Palette) speichern', self)
@@ -181,8 +180,8 @@ class Editor(QMainWindow):
         self._darkmodeAction.setChecked(isdarkmode)
         
         # Toolbar erzeugen und Actions platzieren
-        toolframe = QToolBar()
-        self.addToolBar(Qt.BottomToolBarArea, toolframe)
+        self._toolframe = QToolBar()
+        self.addToolBar(Qt.BottomToolBarArea, self._toolframe)
 
         left_spacer = QWidget()
         left_spacer.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
@@ -193,61 +192,61 @@ class Editor(QMainWindow):
         pfeileTool = ActionWidget(self, actPfeil, actPfeilS)
         formsTool = ActionWidget(self, actKreis, actQuadrat, actEllipse, actRechteck, actKreisF, actQuadratF, actEllipseF, actRechteckF)
 
-        toolframe.addAction(exitAction)
-        toolframe.addWidget(left_spacer)
+        self._toolframe.addAction(exitAction)
+        self._toolframe.addWidget(left_spacer)
 
-        toolframe.addAction(self._darkmodeAction)
-        toolframe.addAction(self._fullscreenAction)
-        toolframe.addSeparator()
+        self._toolframe.addAction(self._darkmodeAction)
+        self._toolframe.addAction(self._fullscreenAction)
+        self._toolframe.addSeparator()
 
-        toolframe.addAction(vordruckActions)
-        toolframe.addAction(geodreieckAction)
-        toolframe.addSeparator()
+        self._toolframe.addAction(vordruckActions)
+        self._toolframe.addAction(geodreieckAction)
+        self._toolframe.addSeparator()
 
-        toolframe.addAction(self._actC1)
-        toolframe.addAction(actC2)
-        toolframe.addAction(actC3)
-        toolframe.addAction(actC4)
-        toolframe.addAction(actCbel)
-        toolframe.addSeparator()
+        self._toolframe.addAction(self._actC1)
+        self._toolframe.addAction(actC2)
+        self._toolframe.addAction(actC3)
+        self._toolframe.addAction(actC4)
+        self._toolframe.addAction(actCbel)
+        self._toolframe.addSeparator()
 
-        toolframe.addAction(self._actP1)
-        toolframe.addAction(actP2)
-        toolframe.addAction(actP3)
-        toolframe.addAction(actP4)
-        toolframe.addSeparator()
+        self._toolframe.addAction(self._actP1)
+        self._toolframe.addAction(actP2)
+        self._toolframe.addAction(actP3)
+        self._toolframe.addAction(actP4)
+        self._toolframe.addSeparator()
 
-        toolframe.addAction(self._actFreihand)
-        toolframe.addAction(linesTool)
-        toolframe.addAction(pfeileTool)
-        toolframe.addAction(formsTool)
-        toolframe.addAction(actRubber)
-        toolframe.addAction(actEdit)
-        toolframe.addSeparator()
+        self._toolframe.addAction(self._actFreihand)
+        self._toolframe.addAction(linesTool)
+        self._toolframe.addAction(pfeileTool)
+        self._toolframe.addAction(formsTool)
+        self._toolframe.addAction(actRubber)
+        self._toolframe.addAction(actEdit)
+        self._toolframe.addSeparator()
 
-        toolframe.addAction(self._deleteAction)
-        toolframe.addAction(self._copyAction)
-        toolframe.addSeparator()
+        self._toolframe.addAction(self._deleteAction)
+        self._toolframe.addAction(self._copyAction)
+        self._toolframe.addSeparator()
 
-        toolframe.addAction(undoAction)
-        toolframe.addAction(redoAction)
-        toolframe.addSeparator()
+        self._toolframe.addAction(self._undoAction)
+        self._toolframe.addAction(self._redoAction)
+        self._toolframe.addSeparator()
 
-        toolframe.addAction(speichernAction)
-        toolframe.addAction(ladenAction)
-        toolframe.addAction(clipboardPasteAction)
-        toolframe.addAction(saveSettingsAction)
-        toolframe.addSeparator()
+        self._toolframe.addAction(speichernAction)
+        self._toolframe.addAction(ladenAction)
+        self._toolframe.addAction(clipboardPasteAction)
+        self._toolframe.addAction(saveSettingsAction)
+        self._toolframe.addSeparator()
 
-        toolframe.addAction(zoominAction)
-        toolframe.addAction(zoomorigAction)
-        toolframe.addAction(zoomoutAction)
-        toolframe.addSeparator()
+        self._toolframe.addAction(zoominAction)
+        self._toolframe.addAction(zoomorigAction)
+        self._toolframe.addAction(zoomoutAction)
+        self._toolframe.addSeparator()
 
-        toolframe.addAction(clearAction)
-        toolframe.addWidget(right_spacer)
-        toolframe.addAction(kalibrierenAction)
-        toolframe.addAction(helpAction)
+        self._toolframe.addAction(clearAction)
+        self._toolframe.addWidget(right_spacer)
+        self._toolframe.addAction(kalibrierenAction)
+        self._toolframe.addAction(helpAction)
 
 
         self._deleteAction.triggered.connect(self.deleteClicked.emit)
@@ -311,11 +310,16 @@ class Editor(QMainWindow):
             self._fullscreenAction.setChecked(self.isFullScreen())
             self._tafelview.setSceneRectFromViewport()
             QApplication.instance().applicationStateChanged.disconnect()
+            #UndoWindow(self, self.undostack).show()
+
 
 
     def event(self, ev: QEvent):
         if ev.type() == QEvent.ApplicationPaletteChange:
             self.paletteChanged.emit()
+            self._undoAction.setIcon(SVGIcon('undo'))
+            self._redoAction.setIcon(SVGIcon('redo'))
+            self._toolframe.findChild(QToolButton, "qt_toolbar_ext_button").setIcon(SVGIcon('toolbaricon'))
         return super().event(ev)
 
     def tafelHatGemalt(self):
@@ -514,9 +518,9 @@ class Action(QAction):
                 qcolor = QApplication.instance().palette().color(QPalette.WindowText)
             else:
                 qcolor = QColor(self._iconname)
-            self.setIcon(getIconColor(qcolor))
+            self.setIcon(ColorIcon(qcolor))
         else:
-            self.setIcon(getIconSvg(self._iconname))
+            self.setIcon(SVGIcon(self._iconname))
         if self._iconname == 'foreground' and self._iscolor and self.isChecked():
             self.trigger()
 
@@ -578,7 +582,7 @@ if __name__ == "__main__":
     QLocale.setDefault(QLocale.German)
     app = QApplication()
     app.setStyle('Fusion')
-    app.setWindowIcon(getIconSvg('oszli'))
+    app.setWindowIcon(SVGIcon('oszli'))
     app.setApplicationDisplayName('Endlostafel')
 
     parser = EndlostafelArgumentParser(description='Endlostafel für das digitale Klassenzimmer. Einfach nur schreiben.')

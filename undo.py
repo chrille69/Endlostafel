@@ -19,8 +19,8 @@ import logging
 logger = logging.getLogger('GUI')
 
 from PySide6.QtCore import QPointF
-from PySide6.QtGui import QUndoCommand
-from PySide6.QtWidgets import QGraphicsItem, QGraphicsScene
+from PySide6.QtGui import QUndoCommand, QUndoStack
+from PySide6.QtWidgets import QGraphicsItem, QGraphicsScene, QWidget, QDialog, QGridLayout, QUndoView
 
 class AddItem(QUndoCommand):
     def __init__(self, scene: QGraphicsScene, item: QGraphicsItem):
@@ -75,6 +75,8 @@ class MoveItem(QUndoCommand):
         if item:
             self._items[item] = [oldpos, newpos]
         self.setText('Element verschoben')
+        if not self._item:
+            self.setObsolete(True)
 
     def id(self) -> int:
         return 1
@@ -84,7 +86,6 @@ class MoveItem(QUndoCommand):
             return False
         
         if not other._item:
-            other.setObsolete(True)
             self._endOfMerge = True
             return False
         
@@ -98,4 +99,11 @@ class MoveItem(QUndoCommand):
     def redo(self):
         for item, positions in self._items.items():
             item.setPos(positions[1])
+
+class UndoWindow(QDialog):
+    def __init__(self, parent: QWidget, undostack: QUndoStack) -> None:
+        super().__init__(parent)
+        layout = QGridLayout()
+        layout.addWidget(QUndoView(undostack, self))
+        self.setLayout(layout)
 
