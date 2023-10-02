@@ -298,7 +298,10 @@ iconssvg = {
             <path style="fill:none;stroke-width:1.0352px;stroke:{htmlcolor}" id="halbkreis" d="m11.13 4.908a4.3996 4.3996 0 01-.0125 6.2213 4.3996 4.3996 0 01-6.2213-.01135"/>
             <path style="fill:none;stroke-width:1.0352px;stroke:{htmlcolor}" id="dreieck" d="m1.5425 14.482h12.94v-12.94z"/>
         </svg>''',
-    'toolbaricon': '''<svg width="11.213mm" height="11.213mm" version="1.1" viewBox="0 0 11.213 11.213" xml:space="preserve"
+    'doublearrow': '''<svg xmlns="http://www.w3.org/2000/svg" height="24" viewBox="0 -960 960 960" width="24" fill="{htmlcolor}">
+            <path d="m242-200 200-280-200-280h98l200 280-200 280h-98Zm238 0 200-280-200-280h98l200 280-200 280h-98Z" />
+        </svg>''',
+    'toolbarbutton': '''<svg width="11.213mm" height="11.213mm" version="1.1" viewBox="0 0 11.213 11.213" xml:space="preserve"
             xmlns="http://www.w3.org/2000/svg" fill="{htmlcolor}">
             <g transform="translate(-6.6934 -6.3154)">
                 <path

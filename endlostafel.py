@@ -319,7 +319,7 @@ class Editor(QMainWindow):
             self.paletteChanged.emit()
             self._undoAction.setIcon(SVGIcon('undo'))
             self._redoAction.setIcon(SVGIcon('redo'))
-            self._toolframe.findChild(QToolButton, "qt_toolbar_ext_button").setIcon(SVGIcon('toolbaricon'))
+            self._toolframe.findChild(QToolButton, "qt_toolbar_ext_button").setIcon(SVGIcon('toolbarbutton'))
         return super().event(ev)
 
     def tafelHatGemalt(self):
