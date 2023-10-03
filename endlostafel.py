@@ -69,6 +69,8 @@ class Editor(QMainWindow):
         self._ungespeichert = False
         uhr = Uhr(self)
         self.undostack = QUndoStack(self)
+        # Das wichtigste: Die QGraphicsView
+        self._tafelview = Tafelview(self)
 
         isdarkmode = False if self._settings.value("editor/darkmode", False) == 'false' else True
         QApplication.setPalette(paletteDark if isdarkmode else paletteLight)
@@ -100,13 +102,13 @@ class Editor(QMainWindow):
         actCbel.triggered.connect(self.customcolor)
         self._colorgroup.addAction(actCbel)
 
-        self._actP1 = Action( 'pensize-1px',  '1px', self)
-        actP2 = Action( 'pensize-3px',  '3px', self)
+        actP1 = Action( 'pensize-1px',  '1px', self)
+        self._actP2 = Action( 'pensize-3px',  '3px', self)
         actP3 = Action( 'pensize-5px', '10px', self)
         actP4 = Action('pensize-20px', '20px', self)
         self._pensizeactions = {
-            self._actP1:  1,
-            actP2:  3,
+            actP1:  1,
+            self._actP2:  3,
             actP3:  5,
             actP4: 20,
         }
@@ -188,6 +190,7 @@ class Editor(QMainWindow):
         right_spacer = QWidget()
         right_spacer.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
 
+        pensizetool = ActionWidget(self, actP1, self._actP2, actP3, actP4, popupMode=QToolButton.InstantPopup)
         linesTool = ActionWidget(self, actLinie, actLinieS)
         pfeileTool = ActionWidget(self, actPfeil, actPfeilS)
         formsTool = ActionWidget(self, actKreis, actQuadrat, actEllipse, actRechteck, actKreisF, actQuadratF, actEllipseF, actRechteckF)
@@ -210,10 +213,7 @@ class Editor(QMainWindow):
         self._toolframe.addAction(actCbel)
         self._toolframe.addSeparator()
 
-        self._toolframe.addAction(self._actP1)
-        self._toolframe.addAction(actP2)
-        self._toolframe.addAction(actP3)
-        self._toolframe.addAction(actP4)
+        self._toolframe.addAction(pensizetool)
         self._toolframe.addSeparator()
 
         self._toolframe.addAction(self._actFreihand)
@@ -269,8 +269,6 @@ class Editor(QMainWindow):
         kalibrierenAction.triggered.connect(self.kalibrierenClicked)
 
     def initView(self):
-        # Das wichtigste: Die QGraphicsView
-        self._tafelview = Tafelview(self)
         self.setCentralWidget(self._tafelview)
 
         # Zu den Signals verbinden
@@ -298,7 +296,7 @@ class Editor(QMainWindow):
         if pensizeaction:
             pensizeaction.pop().trigger()
         else:
-            self._actP1.trigger()
+            self._actP2.trigger()
 
 
     def lateInit(self, appstate: Qt.ApplicationState):
@@ -526,13 +524,13 @@ class Action(QAction):
 
 
 class ActionWidget(QWidgetAction):
-    def __init__(self, parent, *actionArray):
+    def __init__(self, parent, *actionArray, popupMode: QToolButton.ToolButtonPopupMode = QToolButton.MenuButtonPopup):
         super().__init__(parent)
         menu = QMenu(parent)
         for action in actionArray:
             menu.addAction(action)
         self.button = QToolButton()
-        self.button.setPopupMode(QToolButton.MenuButtonPopup)
+        self.button.setPopupMode(popupMode)
         self.button.setDefaultAction(actionArray[0])
         self.button.setMenu(menu)
         self.setDefaultWidget(self.button)

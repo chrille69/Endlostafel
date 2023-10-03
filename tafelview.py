@@ -75,14 +75,12 @@ class Tafelview(QGraphicsView):
         self.setDragMode(QGraphicsView.RubberBandDrag)
         self.viewport().setAttribute(Qt.WA_AcceptTouchEvents, True)
         self.viewport().grabGesture(Qt.PinchGesture)
-        tafel = QGraphicsScene(self)
-        self.setScene(tafel)
+        self.setScene(QGraphicsScene(self))
         self.setBackgroundBrush(QColor(Qt.transparent))
         self._currentItem: Pfad = None
         self._lastPos: QPointF = None
         self._drawpen = QPen(qcolor, pensize, Qt.SolidLine, c=Qt.RoundCap, j=Qt.RoundJoin)
         self._drawpen.setCosmetic(True)
-        self._drawbrush = Qt.NoBrush
         self._arrowbrush = QBrush(QColor(qcolor))
         self._arrowpen = QPen(self._drawpen)
         self._arrowpen.setJoinStyle(Qt.MiterJoin)
@@ -159,11 +157,14 @@ class Tafelview(QGraphicsView):
         self._fgcolor = QApplication.instance().palette().color(QPalette.WindowText)
 
     @Slot(str)
-    def setPencolor(self, colorname: str):
-        if colorname == 'foreground':
-            qcolor = self._fgcolor
+    def setPencolor(self, color: str | QColor):
+        if type(color) == QColor:
+            qcolor = color
         else:
-            qcolor = QColor(colorname)
+            if color == 'foreground':
+                qcolor = self._fgcolor
+            else:
+                qcolor = QColor(color)
         self._drawpen.setColor(qcolor)
         self._arrowpen.setColor(qcolor)
         self._arrowbrush.setColor(qcolor)
