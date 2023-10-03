@@ -88,7 +88,6 @@ class Tafelview(QGraphicsView):
         self._radiergummi = Radiergummi(self, self._radiersize/self.transform().m11(), QPointF(0,0))
         self._currentpen: QPen = None
         self._currentbrush: QBrush = None
-        self._totalTransform = self.transform()
         self._fgcolor = QApplication.instance().palette().color(QPalette.WindowText)
         self._kalibriere = False
         self._mittlerePointsize = parent.getKalibriert()

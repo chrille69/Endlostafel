@@ -255,15 +255,15 @@ iconssvg = {
             <path style="fill:{htmlcolor}" d="M 9,2 14,5 9,8 V 6 H 6 C 4.32,6 3,7.321 3,9 3,10.679 4.32,12 6,12 H 11 V 14 H 6 C 3.25,14 1,11.753 1,9 1,6.247 3.25,4 6,4 H 9 Z"/>
         </svg>''',
     'save': '''
-        <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 0 24 24" width="24px" fill="{htmlcolor}">
-            <path d="M0 0h24v24H0V0z" fill="none" />
-            <path
-                d="M17 3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V7l-4-4zm2 16H5V5h11.17L19 7.83V19zm-7-7c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3zM6 6h9v4H6z" />
+        <svg width="18" height="18" fill="{htmlcolor}" version="1.1" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
+            <path d="m-3-3h24v24h-24z" fill="none"/>
+            <path d="m14 0h-12c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2v-12zm2.5 16.5h-15v-15h11.67l3.33 3.33zm-7.5-7.5c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3zm-6-6h9v4h-9z"/>
         </svg>''',
     'open': '''
-        <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 0 24 24" width="24px" fill="{htmlcolor}">
-            <rect fill="none" height="24" width="24" />
-            <path d="M15,22H6c-1.1,0-2-0.9-2-2V4c0-1.1,0.9-2,2-2h8l6,6v6h-2V9h-5V4H6v16h9V22z M19,21.66l0-2.24l2.95,2.95l1.41-1.41L20.41,18 h2.24v-2H17v5.66H19z" />
+        <svg width="19.36" height="20.37" enable-background="new 0 0 24 24" fill="{htmlcolor}" version="1.1" viewBox="0 0 19.36 20.37" xmlns="http://www.w3.org/2000/svg">
+            <g transform="translate(-4,-2)">
+                <path d="m15 22h-9c-1.1 0-2-.9-2-2v-16c0-1.1.9-2 2-2h8l6 6v6h-1.5v-5h-5.5v-5.5h-7.5v17h9.5zm4-.34v-2.24l2.95 2.95 1.41-1.41-2.95-2.96h2.24v-2h-5.65v5.66z"/>
+            </g>
         </svg>''',
     'prefs': '''
         <svg width="24px" height="24px" fill="{htmlcolor}" version="1.1" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">

@@ -235,7 +235,6 @@ class Editor(QMainWindow):
         self._toolframe.addAction(speichernAction)
         self._toolframe.addAction(ladenAction)
         self._toolframe.addAction(clipboardPasteAction)
-        self._toolframe.addAction(saveSettingsAction)
         self._toolframe.addSeparator()
 
         self._toolframe.addAction(zoominAction)
@@ -245,6 +244,7 @@ class Editor(QMainWindow):
 
         self._toolframe.addAction(clearAction)
         self._toolframe.addWidget(right_spacer)
+        self._toolframe.addAction(saveSettingsAction)
         self._toolframe.addAction(kalibrierenAction)
         self._toolframe.addAction(helpAction)
 
@@ -417,7 +417,8 @@ class Editor(QMainWindow):
             <tr><td align='right'>BigPointFactor:&nbsp;</td><td>{self._settings.value('editor/bigpointfactor',2)}</td></tr>
             <tr><td align='right'>VeryBigPointFactor:&nbsp;</td><td>{self._settings.value('editor/verybigpointfactor',4)}</td></tr>
         </table>
-        <p>Der Start der Anwendung kann mit der Kommandozeilenoption <code>--show [fullscreen,maximized,normal]</code> gesetzt werden.</p>'''
+        <p>Der Start der Anwendung kann mit der Kommandozeilenoption <code>--show [fullscreen,maximized,normal]</code> gesetzt werden.
+        Rufen Sie die Endlostafel mit der Option <code>--help</code> auf, um alle Kommandozeilenoptionen zu sehen. </p>'''
         QMessageBox.information(self,'Einstellungen speichern',text)
 
     def settingShowName(self):
@@ -490,11 +491,10 @@ class Editor(QMainWindow):
             maximized gestartet.</p>
             <h4>Bekannte Bugs</h4>
             <ul>
-                <li>Undo funktioniert nicht beim Löschen und Radieren von Objekten.</li>
                 <li>Beim Editieren von Objekten funktioniert das Rubberband erst beim zweiten
                     Anlauf (nur Touchscreens).</li>
             </ul>
-            <p>Berlin, November 2021</p>'''
+            <p>Berlin, Oktober 2023</p>'''
         QMessageBox.about(self, 'Über Endlostafel',text)
 
     def customcolor(self):
