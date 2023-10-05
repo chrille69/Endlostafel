@@ -60,7 +60,7 @@ class Editor(QMainWindow):
     kalibrierenClicked = Signal()
 
 
-    def __init__(self, settings: QSettings, debug=False):
+    def __init__(self, settings: QSettings, debug=False, undoview=False):
         super().__init__()
         QApplication.instance().applicationStateChanged.connect(self.lateInit)
         self._settings = settings
@@ -308,7 +308,8 @@ class Editor(QMainWindow):
             self._fullscreenAction.setChecked(self.isFullScreen())
             self._tafelview.setSceneRectFromViewport()
             QApplication.instance().applicationStateChanged.disconnect()
-            #UndoWindow(self, self.undostack).show()
+            if undoview:
+                UndoWindow(self, self.undostack).show()
 
 
 
@@ -588,6 +589,7 @@ if __name__ == "__main__":
     parser.add_argument('--show',choices=['normal','fullscreen','maximized'],help='Gibt an, wie die Tafel geöffnet werden soll.')
     parser.add_argument('--bigpointfactor',type=float,help='Größe eines großen Touchpoints gegenüber des kalibrierten Touchpoints.')
     parser.add_argument('--verybigpointfactor',type=float,help='Größe eines sehr großen Touchpoints gegenüber des kalibrierten Touchpoints.')
+    parser.add_argument('--undoview',action='store_true',help='Zeigt ein Undo-Fenster an.')
 
     try:
         options=vars(parser.parse_args())
@@ -614,7 +616,7 @@ if __name__ == "__main__":
     if options['verybigpointfactor']:
         settings.setValue('editor/verybigpointfactor', options['verybigpointfactor'])
 
-    d = Editor(settings, options['logging'])
+    d = Editor(settings, options['logging'], options['undoview'])
     handler = LogWindowHandler(d.logwindow)
 
     logger.addHandler(handler)
