@@ -65,6 +65,7 @@ class Editor(QMainWindow):
         QApplication.instance().applicationStateChanged.connect(self.lateInit)
         self._settings = settings
         self._debug = debug
+        self._undoview = undoview
         self.logwindow = LogWindow(self)
         self._ungespeichert = False
         uhr = Uhr(self)
@@ -308,7 +309,7 @@ class Editor(QMainWindow):
             self._fullscreenAction.setChecked(self.isFullScreen())
             self._tafelview.setSceneRectFromViewport()
             QApplication.instance().applicationStateChanged.disconnect()
-            if undoview:
+            if self._undoview:
                 UndoWindow(self, self.undostack).show()
 
 
