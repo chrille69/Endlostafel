@@ -79,16 +79,17 @@ class Tafelview(QGraphicsView):
         self.setBackgroundBrush(QColor(Qt.transparent))
         self._currentItem: Pfad = None
         self._lastPos: QPointF = None
+        self._fgcolor = QApplication.instance().palette().color(QPalette.WindowText)
+        self._colorname = 'foreground'
         self._drawpen = QPen(qcolor, pensize, Qt.SolidLine, c=Qt.RoundCap, j=Qt.RoundJoin)
         self._drawpen.setCosmetic(True)
         self._arrowbrush = QBrush(QColor(qcolor))
         self._arrowpen = QPen(self._drawpen)
         self._arrowpen.setJoinStyle(Qt.MiterJoin)
         self._radiersize = QSizeF(pensize*5, pensize*10)
-        self._radiergummi = Radiergummi(self, self._radiersize/self.transform().m11(), QPointF(0,0))
+        self._radiergummi = Radiergummi(self._radiersize/self.transform().m11(), QPointF(0,0))
         self._currentpen: QPen = None
         self._currentbrush: QBrush = None
-        self._fgcolor = QApplication.instance().palette().color(QPalette.WindowText)
         self._kalibriere = False
         self._mittlerePointsize = parent.getKalibriert()
         self._countPointsize = 50
@@ -111,7 +112,6 @@ class Tafelview(QGraphicsView):
         parent.zoomoutClicked.connect(self.zoomout)
         parent.newItemCreated.connect(self.importItem)
         parent.clearClicked.connect(self.clearall)
-        parent.paletteChanged.connect(self.newPalette)
         parent.kalibrierenClicked.connect(self.starteKalibrieren)
 
         self.resized.connect(self.changeSceneRect)
@@ -140,7 +140,7 @@ class Tafelview(QGraphicsView):
         btn_right.erweitert.connect(self.erweitern)
         self.resized.connect(btn_right.moveToSide)
 
-        self._geodreieck = Geodreieck(self)
+        self._geodreieck = Geodreieck()
         self._drehgriff = self._geodreieck.drehgriff()
         self._schiebegriff = self._geodreieck.schiebegriff()
         self.centerGeodreieck()
@@ -153,17 +153,17 @@ class Tafelview(QGraphicsView):
     def newPalette(self):
         self._status2cursor = self.initCursor()
         self.setCustomCursor()
-        self._fgcolor = QApplication.instance().palette().color(QPalette.WindowText)
+        self._fgcolor = self.palette().color(QPalette.WindowText)
+        if self._colorname == 'foreground':
+            self.setPencolor('foreground')
 
     @Slot(str)
-    def setPencolor(self, color: str | QColor):
-        if type(color) == QColor:
-            qcolor = color
+    def setPencolor(self, color: str):
+        self._colorname = color
+        if color == 'foreground':
+            qcolor = self._fgcolor
         else:
-            if color == 'foreground':
-                qcolor = self._fgcolor
-            else:
-                qcolor = QColor(color)
+            qcolor = QColor(color)
         self._drawpen.setColor(qcolor)
         self._arrowpen.setColor(qcolor)
         self._arrowbrush.setColor(qcolor)
@@ -173,7 +173,7 @@ class Tafelview(QGraphicsView):
         self._drawpen.setWidthF(pensize)
         self._arrowpen.setWidthF(pensize)
         self._radiersize = QSizeF(pensize*5, pensize*10)
-        self._radiergummi = Radiergummi(self, self._radiersize/self.transform().m11(), QPointF(0,0))
+        self._radiergummi = Radiergummi(self._radiersize/self.transform().m11(), QPointF(0,0))
         self.setCustomCursor()
 
     def centerGeodreieck(self):
@@ -370,7 +370,7 @@ class Tafelview(QGraphicsView):
         size = Tafelview.RADIERGUMMISIZESMALL
         if self.isVeryBigPoint(pointsize):
             size = Tafelview.RADIERGUMMISIZEBIG
-        self._radiergummi = Radiergummi(self, size/self.transform().m11(), pos)
+        self._radiergummi = Radiergummi(size/self.transform().m11(), pos)
         self.scene().addItem(self._radiergummi)
         self.setStatus(Tafelview.statusRadiere)
 
@@ -386,16 +386,23 @@ class Tafelview(QGraphicsView):
         self.setStatus(self._tmpStatus)
         self._tmpStatus = None
         self.scene().removeItem(self._radiergummi)
-        self._radiergummi = Radiergummi(self, self._radiersize/self.transform().m11(), QPointF(0,0))
+        self._radiergummi = Radiergummi(self._radiersize/self.transform().m11(), QPointF(0,0))
 
     def viewportEvent(self, event: QtCore.QEvent) -> bool:
-        #if logger.isEnabledFor(logging.DEBUG):
-        #    logger.debug(str(event.type()))
-        #    logger.debug(f"Status: {self._status}, Painting: {self._painting}")
+        if logger.isEnabledFor(logging.DEBUG):
+            logger.debug(f'Tafelview: {event}')
 
         try:
             eventtype = event.type()
 
+            if eventtype == QEvent.PaletteChange:
+                self.newPalette()
+                for item in self.scene().items():
+                    if isinstance(item, Pfad):
+                        item.newPalette(self.palette())
+                self._geodreieck.newPalette(self.palette())
+                return True
+            
             if self._status == Tafelview.statusEdit:
                 if eventtype in [QEvent.TouchCancel,QEvent.TouchEnd,QEvent.MouseButtonRelease]:
                     self.finishedEdit.emit(self.parent())
@@ -517,12 +524,12 @@ class Tafelview(QGraphicsView):
 
     def scale(self, sx: float, sy: float):
         super().scale(sx, sy)
-        self._radiergummi = Radiergummi(self, self._radiersize/self.transform().m11(), QPointF(0,0))
+        self._radiergummi = Radiergummi(self._radiersize/self.transform().m11(), QPointF(0,0))
         self.setCustomCursor()
 
     def resetTransform(self):
         super().resetTransform()
-        self._radiergummi = Radiergummi(self, self._radiersize/self.transform().m11(), QPointF(0,0))
+        self._radiergummi = Radiergummi(self._radiersize/self.transform().m11(), QPointF(0,0))
         self.setCustomCursor()
 
     @Slot()
@@ -685,11 +692,6 @@ class erweiternButton(QToolButton):
         self.setToolTip('Seite erweitern')
         self.clicked.connect(lambda: self.erweitert.emit(self._richtung))
         self.setCursor(Qt.ArrowCursor)
-        parent.parent().paletteChanged.connect(self.newPalette)
-
-    @Slot()
-    def newPalette(self):
-        self.setIcon(SVGIcon('go-'+self._richtung))
 
     @Slot()
     def moveToSide(self):

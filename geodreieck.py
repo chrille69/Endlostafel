@@ -22,9 +22,8 @@ from PySide6.QtSvgWidgets import QGraphicsSvgItem
 from PySide6.QtWidgets import QApplication, QGraphicsItem, QGraphicsView
 
 class Geodreieck(QGraphicsSvgItem):
-    def __init__(self, view: QGraphicsView):
+    def __init__(self):
         super().__init__()
-        view.parent().paletteChanged.connect(self.newPalette)
         self._skalafarbe = QApplication.instance().palette().color(QPalette.WindowText).name()
 
         self.setCacheMode(QGraphicsItem.NoCache)
@@ -86,8 +85,8 @@ class Geodreieck(QGraphicsSvgItem):
     def schiebegriff(self):
         return self._verschiebegriff
 
-    def newPalette(self):
-        self._skalafarbe = QApplication.instance().palette().color(QPalette.WindowText).name()
+    def newPalette(self, palette):
+        self._skalafarbe = palette.color(QPalette.WindowText).name()
         self.renderer().load(QByteArray(svg.format(skalafarbe=self._skalafarbe)))
 
 

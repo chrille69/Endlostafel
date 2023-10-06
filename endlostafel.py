@@ -38,7 +38,7 @@ from undo import UndoWindow
 # Zum Erzeugen der exe:
 # pyinstaller.exe -F -i "oszli-icon.ico" -w endlostafel.py
 
-VERSION='2.12'
+VERSION='2.13'
 
 
 class Editor(QMainWindow):
@@ -54,7 +54,6 @@ class Editor(QMainWindow):
     newItemCreated = Signal(QGraphicsItem)
     clearClicked = Signal()
     geodreieckClick = Signal(bool)
-    paletteChanged = Signal()
     karopapierClicked = Signal()
     linienpapierClicked = Signal()
     kalibrierenClicked = Signal()
@@ -70,11 +69,12 @@ class Editor(QMainWindow):
         self._ungespeichert = False
         uhr = Uhr(self)
         self.undostack = QUndoStack(self)
-        # Das wichtigste: Die QGraphicsView
-        self._tafelview = Tafelview(self)
 
         isdarkmode = False if self._settings.value("editor/darkmode", False) == 'false' else True
         QApplication.setPalette(paletteDark if isdarkmode else paletteLight)
+
+        # Das wichtigste: Die QGraphicsView
+        self._tafelview = Tafelview(self)
 
         # Die Statusleiste wird gebastelt
         self._speicherlabel = QLabel()
@@ -268,6 +268,9 @@ class Editor(QMainWindow):
         mmPapierDialog.mmPapierCreated.connect(self.newItemCreated.emit)
         clipboardPasteAction.triggered.connect(self.importClipboard)
         kalibrierenAction.triggered.connect(self.kalibrierenClicked)
+        self._undoAction.setIcon(SVGIcon('undo'))
+        self._redoAction.setIcon(SVGIcon('redo'))
+        self._toolframe.findChild(QToolButton, "qt_toolbar_ext_button").setIcon(SVGIcon('toolbarbutton'))
 
     def initView(self):
         self.setCentralWidget(self._tafelview)
@@ -299,7 +302,6 @@ class Editor(QMainWindow):
         else:
             self._actP2.trigger()
 
-
     def lateInit(self, appstate: Qt.ApplicationState):
         'Einige Dinge können erst nach dem aktivieren des Fenster eingestellt werden (z.B. viewport)'
         if appstate == Qt.ApplicationActive:
@@ -311,16 +313,6 @@ class Editor(QMainWindow):
             QApplication.instance().applicationStateChanged.disconnect()
             if self._undoview:
                 UndoWindow(self, self.undostack).show()
-
-
-
-    def event(self, ev: QEvent):
-        if ev.type() == QEvent.ApplicationPaletteChange:
-            self.paletteChanged.emit()
-            self._undoAction.setIcon(SVGIcon('undo'))
-            self._redoAction.setIcon(SVGIcon('redo'))
-            self._toolframe.findChild(QToolButton, "qt_toolbar_ext_button").setIcon(SVGIcon('toolbarbutton'))
-        return super().event(ev)
 
     def tafelHatGemalt(self):
         self.setUngespeichert()
@@ -506,24 +498,11 @@ class Editor(QMainWindow):
 
 class Action(QAction):
     def __init__(self, iconname: str, text: str, parent: QWidget, iscolor=False):
-        parent.paletteChanged.connect(self.newPalette)
         super().__init__(text, parent)
-        self._iconname = iconname
-        self._iscolor = iscolor
-        self.newPalette()
-
-    def newPalette(self):
-        if self._iscolor:
-            if self._iconname == 'foreground':
-                qcolor = QApplication.instance().palette().color(QPalette.WindowText)
-            else:
-                qcolor = QColor(self._iconname)
-            self.setIcon(ColorIcon(qcolor))
+        if iscolor:
+            self.setIcon(ColorIcon(iconname))
         else:
-            self.setIcon(SVGIcon(self._iconname))
-        if self._iconname == 'foreground' and self._iscolor and self.isChecked():
-            self.trigger()
-
+            self.setIcon(SVGIcon(iconname))
 
 class ActionWidget(QWidgetAction):
     def __init__(self, parent, *actionArray, popupMode: QToolButton.ToolButtonPopupMode = QToolButton.MenuButtonPopup):

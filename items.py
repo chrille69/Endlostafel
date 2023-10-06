@@ -21,7 +21,7 @@ from typing import Any
 from PySide6.QtCore import QPointF, QRectF, QSizeF, Qt
 from PySide6.QtGui import QBrush, QColor, QPainterPath, QPalette, QPen, QPixmap
 from PySide6.QtSvgWidgets import QGraphicsSvgItem
-from PySide6.QtWidgets import QApplication, QGraphicsItem, QGraphicsLineItem, QGraphicsPathItem, QGraphicsPixmapItem, QGraphicsRectItem, QGraphicsView
+from PySide6.QtWidgets import QGraphicsItem, QGraphicsLineItem, QGraphicsPathItem, QGraphicsPixmapItem, QGraphicsRectItem, QGraphicsView
 
 from undo import MoveItem
 
@@ -43,12 +43,11 @@ class Pfad(QGraphicsPathItem):
         view.mousemoved.connect(self.change)
         view.mousereleased.connect(self.disconnect)
         view.finishedEdit.connect(self.registerPosition)
-        view.parent().paletteChanged.connect(self.newPalette)
         self._shape = None
         self._oldpos = None
 
-    def newPalette(self):
-        newfgcolor = QApplication.instance().palette().color(QPalette.WindowText)
+    def newPalette(self, palette):
+        newfgcolor = palette.color(QPalette.WindowText)
         pen = self.pen()
         brush = self.brush()
         if pen.color() == self._fgcolor:

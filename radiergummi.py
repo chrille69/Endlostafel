@@ -17,15 +17,14 @@
 
 import logging
 from PySide6.QtCore import QPointF, QRectF, Qt, QSizeF
-from PySide6.QtGui import QColor, QPalette, QPen
-from PySide6.QtWidgets import QApplication, QGraphicsRectItem, QGraphicsView
+from PySide6.QtGui import QColor, QPen
+from PySide6.QtWidgets import QGraphicsRectItem, QGraphicsView
 
 logger = logging.getLogger('GUI')
 
 class Radiergummi(QGraphicsRectItem):
-    def __init__(self, view: QGraphicsView, size: QSizeF, pos: QPointF = QPointF(0,0)):
+    def __init__(self, size: QSizeF, pos: QPointF = QPointF(0,0)):
         super().__init__()
-        view.parent().paletteChanged.connect(self.newPalette)
         rect = QRectF(QPointF(-size.width()/2, -size.height()/2), size)
         self.setRect(rect)
         self.setPos(pos)
@@ -36,7 +35,7 @@ class Radiergummi(QGraphicsRectItem):
         pen.setDashOffset(7)
         self.setPen(pen)
         if logger.isEnabledFor(logging.DEBUG):
-            logger.debug('Radiergummi erzeugt.')
+            logger.debug(f'Radiergummi erzeugt {rect}')
 
     def setSize(self, size: QSizeF):
         rect = QRectF(QPointF(-size.width()/2, -size.height()/2), size)
@@ -44,8 +43,3 @@ class Radiergummi(QGraphicsRectItem):
 
     def size(self) -> QSizeF:
         return self.rect().size()
-
-    def newPalette(self):
-        newfgcolor = QApplication.instance().palette().color(QPalette.PlaceholderText)
-        pen = self.pen()
-        pen.setColor(newfgcolor)

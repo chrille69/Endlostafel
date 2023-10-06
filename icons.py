@@ -18,7 +18,7 @@
 import logging
 
 from PySide6.QtCore import QByteArray, QSize
-from PySide6.QtGui import QColor, QCursor, QImage, QPainter, QPalette, QPixmap, QIcon
+from PySide6.QtGui import QColor, QCursor, QImage, QPainter, QPalette, QPixmap, QIcon, QIconEngine
 from PySide6.QtSvg import QSvgRenderer
 from PySide6.QtWidgets import QApplication, QGraphicsItem, QStyleOptionGraphicsItem
 
@@ -80,34 +80,51 @@ class SVGCursor(QCursor):
         super().__init__(QPixmap(SVGImage(name, width, htmlcolor)), x, y)
 
 
-class ColorIcon(QIcon):
-    def __init__(self, qcolor: QColor):
-        pixmap=QPixmap(32,32)
-        pixmap.fill(qcolor)
-        super().__init__(pixmap)
-
-
-class SVGIcon(QIcon):
-    def __init__(self, name: str):
+class ColorIconEngine(QIconEngine):
+    def __init__(self, colorname):
         super().__init__()
-        self._name = name
+        self._colorname = colorname
+
+    def pixmap(self, size: QSize, mode: QIcon.Mode, state: QIcon.State) -> QPixmap:
+        if self._colorname == 'foreground':
+            color = QApplication.instance().palette().color(QPalette.WindowText)
+        else:
+            color = QColor(self._colorname)
+        pixmap = QPixmap(size)
+        pixmap.fill(color)
+        return pixmap
+
+
+class ColorIcon(QIcon):
+    def __init__(self, colorname):
+        super().__init__(ColorIconEngine(colorname))
+
+
+class SVGIconEngine(QIconEngine):
+    def __init__(self, name):
+        super().__init__()
         self._svgstr = iconssvg[name if name in iconssvg else 'help']
-        self.addPixmap(self.paintPixmap(QIcon.Normal), QIcon.Normal)
-        self.addPixmap(self.paintPixmap(QIcon.Disabled), QIcon.Disabled)
 
-    def newPalette(self):
-        logger.debug(QApplication.instance().palette().color(QPalette.PlaceholderText))
-        self.swap(SVGIcon(self._name))
-
-    def paintPixmap(self, mode: QIcon.Mode):
+    def pixmap(self, size: QSize, mode: QIcon.Mode, state: QIcon.State) -> QPixmap:
+        pixmap = QPixmap(size)
+        pixmap.fill(QColor(0,0,0,0))
+        painter = QPainter()
         palette = QApplication.instance().palette()
         if mode == QIcon.Disabled:
             color = palette.color(QPalette.Disabled, QPalette.PlaceholderText)
         else:
             color = palette.color(QPalette.PlaceholderText)
         htmlcolor = color.name()
-        return QPixmap(SVGImage(self._name, 32, htmlcolor))
+        painter.begin(pixmap)
+        svg = QSvgRenderer(QByteArray(self._svgstr.format(htmlcolor=htmlcolor)))
+        svg.render(painter)
+        painter.end()
+        return pixmap
 
+
+class SVGIcon(QIcon):
+    def __init__(self, name: str):
+        super().__init__(SVGIconEngine(name))
 
 
 
