@@ -16,18 +16,20 @@
 # along with this program.  If not, see https://www.gnu.org/licenses/.
 
 import logging
+logger = logging.getLogger('GUI')
+
 from PySide6 import QtCore
 from PySide6.QtCore import QEvent, QPointF, QRect, QSizeF, Qt, Signal, Slot
 from PySide6.QtGui import QBrush, QColor, QPainter, QPalette, QPen, QResizeEvent
-from PySide6.QtWidgets import QApplication, QGraphicsRectItem, QGraphicsItem, QGraphicsScene, QGraphicsView, QMessageBox, QToolButton, QWidget, QPinchGesture
+from PySide6.QtWidgets import QApplication, QGraphicsRectItem, QGraphicsItem, QGraphicsView, QMessageBox, QToolButton, QWidget, QPinchGesture
 
+from tafelscene import Tafelscene
 from icons import SVGCursor, SVGIcon, ItemCursor
 from items import Ellipse, Kreis, Line, LineSnap, Pfad, Pfeil, PfeilSnap, Punkt, Quadrat, Rechteck, Stift
 from geodreieck import Geodreieck
 from radiergummi import Radiergummi
 from undo import AddItem, RemoveItem, ChangePathItems, MoveItem
 
-logger = logging.getLogger('GUI')
 
 class Tafelview(QGraphicsView):
 
@@ -75,7 +77,7 @@ class Tafelview(QGraphicsView):
         self.setDragMode(QGraphicsView.RubberBandDrag)
         self.viewport().setAttribute(Qt.WA_AcceptTouchEvents, True)
         self.viewport().grabGesture(Qt.PinchGesture)
-        self.setScene(QGraphicsScene(self))
+        self.setScene(Tafelscene(self))
         self.setBackgroundBrush(QColor(Qt.transparent))
         self._currentItem: Pfad = None
         self._lastPos: QPointF = None

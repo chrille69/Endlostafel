@@ -21,7 +21,7 @@ from typing import Any
 from PySide6.QtCore import QPointF, QRectF, QSizeF, Qt
 from PySide6.QtGui import QBrush, QColor, QPainterPath, QPalette, QPen, QPixmap
 from PySide6.QtSvgWidgets import QGraphicsSvgItem
-from PySide6.QtWidgets import QGraphicsItem, QGraphicsLineItem, QGraphicsPathItem, QGraphicsPixmapItem, QGraphicsRectItem, QGraphicsView
+from PySide6.QtWidgets import QGraphicsItem, QGraphicsLineItem, QGraphicsPathItem, QGraphicsPixmapItem, QGraphicsRectItem, QGraphicsView, QGraphicsSceneMouseEvent
 
 from undo import MoveItem
 
@@ -40,11 +40,28 @@ class Pfad(QGraphicsPathItem):
         self.setFlag(QGraphicsItem.ItemIsSelectable, True)
         self.setFlag(QGraphicsItem.ItemSendsGeometryChanges, True)
         self.setCacheMode(QGraphicsItem.NoCache)
+        self.setAcceptedMouseButtons(Qt.AllButtons)
         view.mousemoved.connect(self.change)
         view.mousereleased.connect(self.disconnect)
         view.finishedEdit.connect(self.registerPosition)
         self._shape = None
         self._oldpos = None
+
+    def mousePressEvent(self, event: QGraphicsSceneMouseEvent) -> None:
+        logger.debug(f'Pfad: {event}')
+        return super().mousePressEvent(event)
+
+    def mouseMoveEvent(self, event: QGraphicsSceneMouseEvent) -> None:
+        logger.debug(f'Pfad: {event}')
+        return super().mouseMoveEvent(event)
+    
+    def mouseReleaseEvent(self, event: QGraphicsSceneMouseEvent) -> None:
+        logger.debug(f'Pfad: {event}')
+        return super().mouseReleaseEvent(event)
+
+    def mouseDoubleClickEvent(self, event: QGraphicsSceneMouseEvent) -> None:
+        logger.debug(f'Pfad: {event}')
+        return super().mouseDoubleClickEvent(event)
 
     def newPalette(self, palette):
         newfgcolor = palette.color(QPalette.WindowText)
