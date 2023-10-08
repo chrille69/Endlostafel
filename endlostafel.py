@@ -21,7 +21,7 @@ from functools import partial
 from argparse import ArgumentParser
 from typing import IO
 
-from PySide6.QtCore import QEvent, QLocale, QMarginsF, QSettings, QDate, QTime, QTimer, Qt, Signal, Slot
+from PySide6.QtCore import QLocale, QMarginsF, QSettings, QDate, QTime, QTimer, Qt, Slot
 from PySide6.QtSvg import QSvgGenerator
 from PySide6.QtGui import QAction, QActionGroup, QCloseEvent, QColor, QGuiApplication, QPainter, QPixmap, QPalette, QFont, QUndoStack
 from PySide6.QtWidgets import QApplication, QFileDialog, QGraphicsItem, QGraphicsTextItem, QLabel, QMainWindow, QMenu, QMessageBox, QSizePolicy, QToolBar, QToolButton, QWidget, QWidgetAction, QColorDialog, QUndoView
@@ -30,7 +30,7 @@ from PySide6.QtWidgets import QApplication, QFileDialog, QGraphicsItem, QGraphic
 from icons import ColorIcon, SVGIcon
 from items import Pixelbild, SVGBild, Karopapier, Linienpapier
 from vordrucke import MmLogDialog
-from tafelview import Tafelview
+from tafelview import Tafelview, Werkzeug, Status
 from paletten import dark as paletteDark, light as paletteLight
 from logwindow import LogWindowHandler, LogWindow
 from undo import UndoWindow
@@ -42,22 +42,6 @@ VERSION='2.13'
 
 
 class Editor(QMainWindow):
-
-    newstatus = Signal(str)
-    pencolorChanged = Signal(str)
-    pensizeChanged = Signal(float)
-    deleteClicked = Signal()
-    copyClicked = Signal()
-    zoominClicked = Signal()
-    zoomoutClicked = Signal()
-    zoomresetClicked = Signal()
-    newItemCreated = Signal(QGraphicsItem)
-    clearClicked = Signal()
-    geodreieckClick = Signal(bool)
-    karopapierClicked = Signal()
-    linienpapierClicked = Signal()
-    kalibrierenClicked = Signal()
-
 
     def __init__(self, settings: QSettings, debug=False, undoview=False):
         super().__init__()
@@ -74,7 +58,7 @@ class Editor(QMainWindow):
         QApplication.setPalette(paletteDark if isdarkmode else paletteLight)
 
         # Das wichtigste: Die QGraphicsView
-        self._tafelview = Tafelview(self)
+        self._tafelview = Tafelview(self, self.undostack, self.getBigPointFactor(), self.getVeryBigPointFactor(), self.getKalibriert())
 
         # Die Statusleiste wird gebastelt
         self._speicherlabel = QLabel()
@@ -97,11 +81,11 @@ class Editor(QMainWindow):
             actC4:      'green',
         }
         self._colorgroup = QActionGroup(self)
-        self.configureActionDict(self._coloractions, self._colorgroup, self.pencolorChanged.emit)
-        actCbel = Action('customcolor', 'Farbauswahldialog', self)
-        actCbel.setCheckable(True)
-        actCbel.triggered.connect(self.customcolor)
-        self._colorgroup.addAction(actCbel)
+        self.configureActionDict(self._coloractions, self._colorgroup, self.pencolorchange)
+        self._actCbel = Action('customcolor', 'Farbauswahldialog', self)
+        self._actCbel.setCheckable(True)
+        self._actCbel.triggered.connect(self.customcolor)
+        self._colorgroup.addAction(self._actCbel)
 
         actP1 = Action( 'pensize-1px',  '1px', self)
         self._actP2 = Action( 'pensize-3px',  '3px', self)
@@ -114,7 +98,7 @@ class Editor(QMainWindow):
             actP4: 20,
         }
         self._pensizegroup = QActionGroup(self)
-        self.configureActionDict(self._pensizeactions, self._pensizegroup, self.pensizeChanged.emit)
+        self.configureActionDict(self._pensizeactions, self._pensizegroup, self.pensizechange)
 
         self._actFreihand  = Action(    'stift',              'Freihand', self)
         actLinie     = Action(    'linie',          'Gerade Linie', self)
@@ -131,24 +115,27 @@ class Editor(QMainWindow):
         actRechteckF = Action('rechteckf',    'gefülltes Rechteck', self)
         actRubber    = Action( 'radierer',              'Radieren', self)
         actEdit      = Action(     'edit',     'Objekte editieren', self)
+        self._toolactions = {
+            self._actFreihand:  Werkzeug.Freihand,
+            actLinie:     Werkzeug.Linie,
+            actPfeil:     Werkzeug.Pfeil,
+            actLinieS:    Werkzeug.LinieS,
+            actPfeilS:    Werkzeug.PfeilS,
+            actKreis:     Werkzeug.Kreis,
+            actQuadrat:   Werkzeug.Quadrat,
+            actEllipse:   Werkzeug.Ellipse,
+            actRechteck:  Werkzeug.Rechteck,
+            actKreisF:    Werkzeug.KreisF,
+            actQuadratF:  Werkzeug.QuadratF,
+            actEllipseF:  Werkzeug.EllipseF,
+            actRechteckF: Werkzeug.RechteckF,
+        }
         self._statusactions = {
-            self._actFreihand:  Tafelview.statusFreihand,
-            actLinie:     Tafelview.statusLinie,
-            actPfeil:     Tafelview.statusPfeil,
-            actLinieS:    Tafelview.statusLinieS,
-            actPfeilS:    Tafelview.statusPfeilS,
-            actKreis:     Tafelview.statusKreis,
-            actQuadrat:   Tafelview.statusQuadrat,
-            actEllipse:   Tafelview.statusEllipse,
-            actRechteck:  Tafelview.statusRechteck,
-            actKreisF:    Tafelview.statusKreisF,
-            actQuadratF:  Tafelview.statusQuadratF,
-            actEllipseF:  Tafelview.statusEllipseF,
-            actRechteckF: Tafelview.statusRechteckF,
-            actRubber:    Tafelview.statusRadiere,
-            actEdit:      Tafelview.statusEdit,
+            actRubber:    Status.radieren,
+            actEdit:      Status.editieren,
         }
         self._statusgroup = QActionGroup(self)
+        self.configureActionDict(self._toolactions, self._statusgroup, self.toolchange)
         self.configureActionDict(self._statusactions, self._statusgroup, self.statuschange)
 
         self._deleteAction     = Action(       'delete', 'Löschen', self)
@@ -211,7 +198,7 @@ class Editor(QMainWindow):
         self._toolframe.addAction(actC2)
         self._toolframe.addAction(actC3)
         self._toolframe.addAction(actC4)
-        self._toolframe.addAction(actCbel)
+        self._toolframe.addAction(self._actCbel)
         self._toolframe.addSeparator()
 
         self._toolframe.addAction(pensizetool)
@@ -250,24 +237,24 @@ class Editor(QMainWindow):
         self._toolframe.addAction(helpAction)
 
 
-        self._deleteAction.triggered.connect(self.deleteClicked.emit)
-        self._copyAction.triggered.connect(self.copyClicked.emit)
+        self._deleteAction.triggered.connect(self._tafelview.deleteItems)
+        self._copyAction.triggered.connect(self._tafelview.copyItems)
         speichernAction.triggered.connect(self.speichern)
         ladenAction.triggered.connect(self.laden)
         saveSettingsAction.triggered.connect(self.einstellungenSpeichern)
-        zoomoutAction.triggered.connect(self.zoomoutClicked.emit)
-        zoomorigAction.triggered.connect(self.zoomresetClicked.emit)
-        zoominAction.triggered.connect(self.zoominClicked.emit)
-        clearAction.triggered.connect(self.clearClicked.emit)
-        geodreieckAction.triggered.connect(lambda: self.geodreieckClick.emit(geodreieckAction.isChecked()))
+        zoomoutAction.triggered.connect(self._tafelview.zoomout)
+        zoomorigAction.triggered.connect(self._tafelview.zoomreset)
+        zoominAction.triggered.connect(self._tafelview.zoomin)
+        clearAction.triggered.connect(self._tafelview.clearall)
+        geodreieckAction.triggered.connect(lambda: self._tafelview.enableGeodreieck(geodreieckAction.isChecked()))
         self._fullscreenAction.triggered.connect(lambda: self.fullScreen(self._fullscreenAction.isChecked()))
         exitAction.triggered.connect(self.close)
         helpAction.triggered.connect(self.showHelp)
         self._darkmodeAction.triggered.connect(lambda: QApplication.instance().setPalette(paletteDark if self._darkmodeAction.isChecked() else paletteLight))
         mmPapierAction.triggered.connect(lambda: mmPapierDialog.exec())
-        mmPapierDialog.mmPapierCreated.connect(self.newItemCreated.emit)
+        mmPapierDialog.mmPapierCreated.connect(self._tafelview.importItem)
         clipboardPasteAction.triggered.connect(self.importClipboard)
-        kalibrierenAction.triggered.connect(self.kalibrierenClicked)
+        kalibrierenAction.triggered.connect(self._tafelview.starteKalibrieren)
         self._undoAction.setIcon(SVGIcon('undo'))
         self._redoAction.setIcon(SVGIcon('redo'))
         self._toolframe.findChild(QToolButton, "qt_toolbar_ext_button").setIcon(SVGIcon('toolbarbutton'))
@@ -279,11 +266,11 @@ class Editor(QMainWindow):
         self._tafelview.eswurdegemalt.connect(self.tafelHatGemalt)
         self._tafelview.statusbarinfo.connect(self.statusbarinfo)
         self._tafelview.kalibriert.connect(self.kalibriertSpeichern)
-        self._karopapierAction.triggered.connect(lambda: self.newItemCreated.emit(Karopapier(self._tafelview)))
-        self._linienpapierAction.triggered.connect(lambda: self.newItemCreated.emit(Linienpapier(self._tafelview)))
+        self._karopapierAction.triggered.connect(lambda: self._tafelview.importItem(Karopapier(self._tafelview)))
+        self._linienpapierAction.triggered.connect(lambda: self._tafelview.importItem(Linienpapier(self._tafelview)))
         self.displayMemoryUsage()
         
-        # Trigger den Standard-Status freihand
+        # Trigger das Standard-Werkzeug freihand
         self._actFreihand.trigger()
 
         # Trigger die Standard-Farbe
@@ -369,20 +356,32 @@ class Editor(QMainWindow):
         for action in actionarray:
             action.setDisabled(value)
 
-    def statuschange(self, status):
-        if status in [Tafelview.statusRadiere, Tafelview.statusEdit]:
-            self.setActionsDisabled(self._coloractions, True)
-        else:
-            self.setActionsDisabled(self._coloractions, False)
+    def toolchange(self, tool):
+        self.statuschange(Status.kreativ)
+        self._tafelview.setTool(tool)
 
-        if status == Tafelview.statusEdit:
-            self.setActionsDisabled([self._deleteAction, self._copyAction], False)
+    def statuschange(self, status):
+        if status == Status.kreativ:
+            self.setActionsDisabled(self._coloractions, False)
+            self.setActionsDisabled([self._actCbel], False)
+            self.setActionsDisabled(self._pensizeactions, False)
+        else:
+            self.setActionsDisabled(self._coloractions, True)
+            self.setActionsDisabled([self._actCbel], True)
             self.setActionsDisabled(self._pensizeactions, True)
+
+        if status == Status.editieren:
+            self.setActionsDisabled([self._deleteAction, self._copyAction], False)
         else:
             self.setActionsDisabled([self._deleteAction, self._copyAction], True)
-            self.setActionsDisabled(self._pensizeactions, False)
 
-        self.newstatus.emit(status)
+        self._tafelview.setStatus(status)
+
+    def pensizechange(self, pensize):
+        self._tafelview.setPensize(pensize)
+    
+    def pencolorchange(self, colorname):
+        self._tafelview.setPencolor(colorname)
 
     @Slot(str,int)
     def statusbarinfo(self, txt, timeout):
@@ -392,9 +391,9 @@ class Editor(QMainWindow):
         filename = QFileDialog.getOpenFileName(self, 'SVG-Datei laden', filter='Alle Dateien (*.*);;SVG-Dateien (*.svg);;Bilder (*.png *.xpm *.bmp *.jpg)')[0]
         if filename:
             if filename[-4:] == '.svg':
-                self.newItemCreated.emit(SVGBild(filename))
+                self._tafelview.importItem(SVGBild(filename))
             else:
-                self.newItemCreated.emit(Pixelbild(QPixmap(filename)))
+                self._tafelview.importItem(Pixelbild(QPixmap(filename)))
 
     def einstellungenSpeichern(self):
         self._settings.setValue('editor/darkmode', self._darkmodeAction.isChecked())
@@ -457,18 +456,18 @@ class Editor(QMainWindow):
 
         if mimeData.hasImage():
             item = Pixelbild(QPixmap(mimeData.imageData()))
-            self.newItemCreated.emit(item)
+            self._tafelview.importItem(item)
         elif mimeData.hasHtml():
             item = QGraphicsTextItem()
             item.setHtml(mimeData.html())
             item.setFlag(QGraphicsItem.ItemIsMovable, True)
             item.setFlag(QGraphicsItem.ItemIsSelectable, True)            
-            self.newItemCreated.emit(item)
+            self._tafelview.importItem(item)
         elif mimeData.hasText():
             item = QGraphicsTextItem(mimeData.text())
             item.setFlag(QGraphicsItem.ItemIsMovable, True)
             item.setFlag(QGraphicsItem.ItemIsSelectable, True)            
-            self.newItemCreated.emit(item)
+            self._tafelview.importItem(item)
 
     def showHelp(self):
         text = '''<h1>Endlostafel</h1>
@@ -477,6 +476,7 @@ class Editor(QMainWindow):
             <h4>Kommandozeilenoptionen</h4>
             <p><code>--logging [debug,info,warning,error,critical]<br/>
             --show [fullscreen,maximized,normal]<br/>
+            --undoview<br/>
             --bigpointfactor float<br/>
             --verybigpointfactor float</code></p>
             <p>Startet die Tafel in Vollbild, maximiertem Fenster oder Fenster in Normalgröße. Bei
@@ -493,7 +493,7 @@ class Editor(QMainWindow):
 
     def customcolor(self):
         color = QColorDialog.getColor(parent=self)
-        self.pencolorChanged.emit(color.name())
+        self._tafelview.setPencolor(color.name())
 
 
 class Action(QAction):

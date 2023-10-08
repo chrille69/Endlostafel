@@ -41,27 +41,8 @@ class Pfad(QGraphicsPathItem):
         self.setFlag(QGraphicsItem.ItemSendsGeometryChanges, True)
         self.setCacheMode(QGraphicsItem.NoCache)
         self.setAcceptedMouseButtons(Qt.AllButtons)
-        view.mousemoved.connect(self.change)
-        view.mousereleased.connect(self.disconnect)
-        view.finishedEdit.connect(self.registerPosition)
         self._shape = None
         self._oldpos = None
-
-    def mousePressEvent(self, event: QGraphicsSceneMouseEvent) -> None:
-        logger.debug(f'Pfad: {event}')
-        return super().mousePressEvent(event)
-
-    def mouseMoveEvent(self, event: QGraphicsSceneMouseEvent) -> None:
-        logger.debug(f'Pfad: {event}')
-        return super().mouseMoveEvent(event)
-    
-    def mouseReleaseEvent(self, event: QGraphicsSceneMouseEvent) -> None:
-        logger.debug(f'Pfad: {event}')
-        return super().mouseReleaseEvent(event)
-
-    def mouseDoubleClickEvent(self, event: QGraphicsSceneMouseEvent) -> None:
-        logger.debug(f'Pfad: {event}')
-        return super().mouseDoubleClickEvent(event)
 
     def newPalette(self, palette):
         newfgcolor = palette.color(QPalette.WindowText)
@@ -75,16 +56,12 @@ class Pfad(QGraphicsPathItem):
             self.setBrush(brush)
         self._fgcolor = newfgcolor
     
-    def disconnect(self):
-        self._view.mousemoved.disconnect()
-        self._view.mousereleased.disconnect()
-
     def change(self):
         self.setTransformOriginPoint(self.boundingRect().center())
 
-    def registerPosition(self, app):
+    def registerPosition(self, undostack):
         if self._oldpos:
-            app.undostack.push(MoveItem(self, QPointF(self._oldpos), QPointF(self.pos())))
+            undostack.push(MoveItem(self, QPointF(self._oldpos), QPointF(self.pos())))
             self._oldpos = None
 
     def shape(self):
@@ -169,7 +146,7 @@ class Stift(Pfad):
         super().change()
 
 
-class Line(Pfad):
+class Linie(Pfad):
     def __init__(self, view: QGraphicsView, pos: QPointF, pen: QPen, brush: QBrush):
         super().__init__(view, pos, pen, brush)
 
@@ -181,7 +158,7 @@ class Line(Pfad):
         super().change()
 
 
-class LineSnap(Pfad):
+class LinieSnap(Pfad):
     def __init__(self, view: QGraphicsView, pos: QPointF, pen: QPen, brush: QBrush):
         super().__init__(view, pos, pen, brush)
 

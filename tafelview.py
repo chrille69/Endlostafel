@@ -20,56 +20,51 @@ logger = logging.getLogger('GUI')
 
 from PySide6 import QtCore
 from PySide6.QtCore import QEvent, QPointF, QRect, QSizeF, Qt, Signal, Slot
-from PySide6.QtGui import QBrush, QColor, QPainter, QPalette, QPen, QResizeEvent
-from PySide6.QtWidgets import QApplication, QGraphicsRectItem, QGraphicsItem, QGraphicsView, QMessageBox, QToolButton, QWidget, QPinchGesture
+from PySide6.QtGui import QBrush, QColor, QPainter, QPalette, QPen, QResizeEvent, QUndoStack
+from PySide6.QtWidgets import QApplication, QGraphicsRectItem, QGraphicsItem, QGraphicsView, QMessageBox, QToolButton, QWidget, QPinchGesture, QGraphicsScene
+from enum import Enum
 
-from tafelscene import Tafelscene
 from icons import SVGCursor, SVGIcon, ItemCursor
-from items import Ellipse, Kreis, Line, LineSnap, Pfad, Pfeil, PfeilSnap, Punkt, Quadrat, Rechteck, Stift
+from items import Ellipse, Kreis, Linie, LinieSnap, Pfad, Pfeil, PfeilSnap, Punkt, Quadrat, Rechteck, Stift
 from geodreieck import Geodreieck
 from radiergummi import Radiergummi
 from undo import AddItem, RemoveItem, ChangePathItems, MoveItem
 
+class Werkzeug(Enum):
+    Freihand  = 1
+    Linie     = 2
+    LinieS    = 3
+    Pfeil     = 4
+    PfeilS    = 5
+    Kreis     = 6
+    Quadrat   = 7
+    Ellipse   = 8
+    Rechteck  = 9
+    KreisF    = 10
+    QuadratF  = 11
+    EllipseF  = 12
+    RechteckF = 13
+
+class Status(Enum):
+    kreativ   = 1
+    radieren  = 2
+    editieren = 3
 
 class Tafelview(QGraphicsView):
 
     eswurdegemalt = Signal()
-    resized = Signal()
     statusbarinfo = Signal(str, int)
-    mousemoved = Signal(QPointF)
-    mousereleased = Signal()
-    finishedEdit = Signal(QWidget)
+    finishedEdit = Signal(QUndoStack)
     kalibriert = Signal(float)
-
-    statusFreihand  = 'freihand'
-    statusLinie     = 'linie'
-    statusLinieS    = 'linies'
-    statusPfeil     = 'pfeil'
-    statusPfeilS    = 'pfeils'
-    statusKreis     = 'kreis'
-    statusQuadrat   = 'quadrat'
-    statusEllipse   = 'ellipse'
-    statusRechteck  = 'rechteck'
-    statusKreisF    = 'kreisf'
-    statusQuadratF  = 'quadratf'
-    statusEllipseF  = 'ellipsef'
-    statusRechteckF = 'rechteckf'
-    statusRadiere   = 'radiere'
-    statusEdit      = 'edit'
-
-    statusArray = [
-        statusFreihand, statusLinie, statusPfeil, statusLinieS, statusPfeilS,
-        statusKreis, statusQuadrat, statusEllipse, statusRechteck,
-        statusKreisF, statusQuadratF, statusEllipseF, statusRechteckF,
-        statusEdit, statusRadiere
-    ]
 
     RADIERGUMMISIZESMALL = QSizeF(30, 60)
     RADIERGUMMISIZEBIG   = QSizeF(90, 180)
 
-    def __init__(self, parent: QWidget, qcolor: QColor=QColor(Qt.black), pensize: float=3, status: str=statusFreihand):
+    def __init__(self, parent: QWidget, undostack, bigpointfactor: float, verybigpointfactor: float, mittlerePointsize: float, colorname: str="foreground", pensize: float=3, werkzeug: Werkzeug=Werkzeug.Freihand, status: Status=Status.kreativ):
         super().__init__(parent)
+        self._undostack = undostack
         self._status = status
+        self._tool = werkzeug
         self._tmpStatus = None
         self._painting = False
         self._dreheGeo: bool = None
@@ -77,81 +72,62 @@ class Tafelview(QGraphicsView):
         self.setDragMode(QGraphicsView.RubberBandDrag)
         self.viewport().setAttribute(Qt.WA_AcceptTouchEvents, True)
         self.viewport().grabGesture(Qt.PinchGesture)
-        self.setScene(Tafelscene(self))
+        self.setScene(QGraphicsScene(self))
         self.setBackgroundBrush(QColor(Qt.transparent))
         self._currentItem: Pfad = None
         self._lastPos: QPointF = None
         self._fgcolor = QApplication.instance().palette().color(QPalette.WindowText)
-        self._colorname = 'foreground'
-        self._drawpen = QPen(qcolor, pensize, Qt.SolidLine, c=Qt.RoundCap, j=Qt.RoundJoin)
+
+        self._status2cursor = self.initCursor()
+
+        self._drawpen = QPen(Qt.yellow, 3, Qt.SolidLine, c=Qt.RoundCap, j=Qt.RoundJoin)
         self._drawpen.setCosmetic(True)
-        self._arrowbrush = QBrush(QColor(qcolor))
+        self._drawbrush = QBrush(Qt.yellow)
         self._arrowpen = QPen(self._drawpen)
         self._arrowpen.setJoinStyle(Qt.MiterJoin)
         self._radiersize = QSizeF(pensize*5, pensize*10)
         self._radiergummi = Radiergummi(self._radiersize/self.transform().m11(), QPointF(0,0))
-        self._currentpen: QPen = None
-        self._currentbrush: QBrush = None
+        self.setPencolor(colorname)
+        self.setPensize(pensize)
+
         self._kalibriere = False
-        self._mittlerePointsize = parent.getKalibriert()
+        self._mittlerePointsize = mittlerePointsize
         self._countPointsize = 50
-        self._bigpointfactor = parent.getBigPointFactor()
-        self._verybigpointfactor = parent.getVeryBigPointFactor()
+        self._bigpointfactor = bigpointfactor
+        self._verybigpointfactor = verybigpointfactor
         self._clonedItems = {}
 
         self.setRenderHint(QPainter.Antialiasing)
         self.setTransformationAnchor(QGraphicsView.NoAnchor)
 
-        self._status2cursor = self.initCursor()
+        self._btn_bottom = erweiternButton('bottom', self)
+        self._btn_bottom.setFixedWidth(200)
+        self._btn_bottom.setFixedHeight(20)
+        self._btn_bottom.erweitert.connect(self.erweitern)
 
-        parent.newstatus.connect(self.setStatus)
-        parent.pencolorChanged.connect(self.setPencolor)
-        parent.pensizeChanged.connect(self.setPensize)
-        parent.deleteClicked.connect(self.deleteItems)
-        parent.copyClicked.connect(self.copyItems)
-        parent.zoominClicked.connect(self.zoomin)
-        parent.zoomresetClicked.connect(self.zoomreset)
-        parent.zoomoutClicked.connect(self.zoomout)
-        parent.newItemCreated.connect(self.importItem)
-        parent.clearClicked.connect(self.clearall)
-        parent.kalibrierenClicked.connect(self.starteKalibrieren)
+        self._btn_top = erweiternButton('top', self)
+        self._btn_top.setFixedWidth(200)
+        self._btn_top.setFixedHeight(20)
+        self._btn_top.erweitert.connect(self.erweitern)
 
-        self.resized.connect(self.changeSceneRect)
-        
-        btn_bottom = erweiternButton('bottom', self)
-        btn_bottom.setFixedWidth(200)
-        btn_bottom.setFixedHeight(20)
-        btn_bottom.erweitert.connect(self.erweitern)
-        self.resized.connect(btn_bottom.moveToSide)
+        self._btn_left = erweiternButton('left', self)
+        self._btn_left.setFixedWidth(20)
+        self._btn_left.setFixedHeight(200)
+        self._btn_left.erweitert.connect(self.erweitern)
 
-        btn_top = erweiternButton('top', self)
-        btn_top.setFixedWidth(200)
-        btn_top.setFixedHeight(20)
-        btn_top.erweitert.connect(self.erweitern)
-        self.resized.connect(btn_top.moveToSide)
-
-        btn_left = erweiternButton('left', self)
-        btn_left.setFixedWidth(20)
-        btn_left.setFixedHeight(200)
-        btn_left.erweitert.connect(self.erweitern)
-        self.resized.connect(btn_left.moveToSide)
-
-        btn_right = erweiternButton('right', self)
-        btn_right.setFixedWidth(20)
-        btn_right.setFixedHeight(200)
-        btn_right.erweitert.connect(self.erweitern)
-        self.resized.connect(btn_right.moveToSide)
+        self._btn_right = erweiternButton('right', self)
+        self._btn_right.setFixedWidth(20)
+        self._btn_right.setFixedHeight(200)
+        self._btn_right.erweitert.connect(self.erweitern)
 
         self._geodreieck = Geodreieck()
         self._drehgriff = self._geodreieck.drehgriff()
         self._schiebegriff = self._geodreieck.schiebegriff()
         self.centerGeodreieck()
-        parent.geodreieckClick.connect(self.enableGeodreieck)
 
     def fgcolor(self):
         return self._fgcolor
 
-    @Slot()
     def newPalette(self):
         self._status2cursor = self.initCursor()
         self.setCustomCursor()
@@ -159,7 +135,6 @@ class Tafelview(QGraphicsView):
         if self._colorname == 'foreground':
             self.setPencolor('foreground')
 
-    @Slot(str)
     def setPencolor(self, color: str):
         self._colorname = color
         if color == 'foreground':
@@ -168,9 +143,8 @@ class Tafelview(QGraphicsView):
             qcolor = QColor(color)
         self._drawpen.setColor(qcolor)
         self._arrowpen.setColor(qcolor)
-        self._arrowbrush.setColor(qcolor)
+        self._drawbrush.setColor(qcolor)
 
-    @Slot(float)
     def setPensize(self, pensize: float):
         self._drawpen.setWidthF(pensize)
         self._arrowpen.setWidthF(pensize)
@@ -184,35 +158,34 @@ class Tafelview(QGraphicsView):
 
     def initCursor(self):
         return {
-            Tafelview.statusFreihand : SVGCursor(    'stift'),
-            Tafelview.statusLinie    : SVGCursor(    'linie'),
-            Tafelview.statusPfeil    : SVGCursor(    'pfeil'),
-            Tafelview.statusLinieS   : SVGCursor(    'linie'),
-            Tafelview.statusPfeilS   : SVGCursor(    'pfeil'),
-            Tafelview.statusQuadrat  : SVGCursor(  'quadrat'),
-            Tafelview.statusKreis    : SVGCursor(    'kreis'),
-            Tafelview.statusRechteck : SVGCursor( 'rechteck'),
-            Tafelview.statusEllipse  : SVGCursor(  'ellipse'),
-            Tafelview.statusQuadratF : SVGCursor( 'quadratf'),
-            Tafelview.statusKreisF   : SVGCursor(   'kreisf'),
-            Tafelview.statusRechteckF: SVGCursor('rechteckf'),
-            Tafelview.statusEllipseF : SVGCursor( 'ellipsef'),
-            Tafelview.statusEdit     : SVGCursor(     'edit')
+            Werkzeug.Freihand : SVGCursor(    'stift'),
+            Werkzeug.Linie    : SVGCursor(    'linie'),
+            Werkzeug.Pfeil    : SVGCursor(    'pfeil'),
+            Werkzeug.LinieS   : SVGCursor(    'linie'),
+            Werkzeug.PfeilS   : SVGCursor(    'pfeil'),
+            Werkzeug.Quadrat  : SVGCursor(  'quadrat'),
+            Werkzeug.Kreis    : SVGCursor(    'kreis'),
+            Werkzeug.Rechteck : SVGCursor( 'rechteck'),
+            Werkzeug.Ellipse  : SVGCursor(  'ellipse'),
+            Werkzeug.QuadratF : SVGCursor( 'quadratf'),
+            Werkzeug.KreisF   : SVGCursor(   'kreisf'),
+            Werkzeug.RechteckF: SVGCursor('rechteckf'),
+            Werkzeug.EllipseF : SVGCursor( 'ellipsef'),
+            Status.editieren  : SVGCursor(     'edit')
         }
 
     def setCustomCursor(self):
-        if self._status == Tafelview.statusRadiere:
+        if self._status == Status.radieren:
             cursor = ItemCursor(self._radiergummi, self.transform().m11(), -1, -1)
-        else:
+        elif self._status == Status.editieren:
             cursor = self._status2cursor[self._status]
+        else:
+            cursor = self._status2cursor[self._tool]
         self.viewport().setCursor(cursor)
 
-    @Slot(str)
     def setStatus(self, status):
-        if status not in self.statusArray:
-            raise ValueError(f'Unbekannter Status: {status}')
 
-        if self._status == Tafelview.statusEdit and status != Tafelview.statusEdit:
+        if self._status == Status.editieren and status != Status.editieren:
             for item in self.scene().items():
                 item.setSelected(False)
 
@@ -220,51 +193,47 @@ class Tafelview(QGraphicsView):
         self._painting = False
         self._dreheGeo = False
         self._verschiebeGeo = False
-        
-        # Stift und Pinsel dem Status anpassen
-        if status in [self.statusFreihand, self.statusLinie, self.statusLinieS, self.statusKreis, self.statusQuadrat, self.statusEllipse, self.statusRechteck]:
-            self._currentpen = self._drawpen
-            self._currentbrush = Qt.NoBrush
-        elif status in [self.statusKreisF, self.statusQuadratF, self.statusEllipseF, self.statusRechteckF]:
-            self._currentpen = Qt.NoPen
-            self._currentbrush = self._arrowbrush
-        elif status in [self.statusPfeil, self.statusPfeilS]:
-            self._currentpen = self._arrowpen
-            self._currentbrush = self._arrowbrush
-        else:
-            self._currentpen = Qt.NoPen
-            self._currentbrush = Qt.NoBrush
+        self.setCustomCursor()
+
+    def setTool(self, tool):
+        self._tool = tool
         self.setCustomCursor()
 
     def setLastPos(self, pos):
         self._lastPos = pos
 
     def createCurrentItem(self, pos):
-        if self._status == Tafelview.statusFreihand:
-            item = Stift(self, pos, self._currentpen, self._currentbrush)
-        elif self._status == Tafelview.statusLinie:
-            item = Line(self, pos, self._currentpen, self._currentbrush)
-        elif self._status == Tafelview.statusPfeil:
-            item = Pfeil(self, pos, self._currentpen, self._currentbrush)
-        elif self._status == Tafelview.statusLinieS:
-            item = LineSnap(self, pos, self._currentpen, self._currentbrush)
-        elif self._status == Tafelview.statusPfeilS:
-            item = PfeilSnap(self, pos, self._currentpen, self._currentbrush)
-        elif self._status in [Tafelview.statusKreis, Tafelview.statusKreisF]:
-            item = Kreis(self, pos, self._currentpen, self._currentbrush)
-        elif self._status in [Tafelview.statusEllipse, Tafelview.statusEllipseF]:
-            item = Ellipse(self, pos, self._currentpen, self._currentbrush)
-        elif self._status in [Tafelview.statusQuadrat, Tafelview.statusQuadratF]:
-            item = Quadrat(self, pos, self._currentpen, self._currentbrush)
-        elif self._status in [Tafelview.statusRechteck, Tafelview.statusRechteckF]:
-            item = Rechteck(self, pos, self._currentpen, self._currentbrush)
-        elif self._status == Tafelview.statusRadiere:
-            item = None
+        if self._tool == Werkzeug.Freihand:
+            item = Stift(self, pos, self._drawpen, Qt.NoBrush)
+        elif self._tool == Werkzeug.Linie:
+            item = Linie(self, pos, self._drawpen, Qt.NoBrush)
+        elif self._tool == Werkzeug.Pfeil:
+            item = Pfeil(self, pos, self._arrowpen, self._drawbrush)
+        elif self._tool == Werkzeug.LinieS:
+            item = LinieSnap(self, pos, self._drawpen, Qt.NoBrush)
+        elif self._tool == Werkzeug.PfeilS:
+            item = PfeilSnap(self, pos, self._arrowpen, self._drawbrush)
+        elif self._tool == Werkzeug.Kreis:
+            item = Kreis(self, pos, self._drawpen, Qt.NoBrush)
+        elif self._tool == Werkzeug.KreisF:
+            item = Kreis(self, pos, Qt.NoPen, self._drawbrush)
+        elif self._tool == Werkzeug.Ellipse:
+            item = Ellipse(self, pos, self._drawpen, Qt.NoBrush)
+        elif self._tool == Werkzeug.EllipseF:
+            item = Ellipse(self, pos, Qt.NoPen, self._drawbrush)
+        elif self._tool == Werkzeug.Quadrat:
+            item = Quadrat(self, pos, self._drawpen, Qt.NoBrush)
+        elif self._tool == Werkzeug.QuadratF:
+            item = Quadrat(self, pos, Qt.NoPen, self._drawbrush)
+        elif self._tool == Werkzeug.Rechteck:
+            item = Rechteck(self, pos, self._drawpen, Qt.NoBrush)
+        elif self._tool == Werkzeug.RechteckF:
+            item = Rechteck(self, pos, Qt.NoPen, self._drawbrush)
         else:
-            raise Exception(f'Für den Status "{self._status}" gibt es kein Item.')
+            raise Exception(f'Für das Werkzeug "{self._tool}" gibt es kein Item.')
 
-        if item:
-            self.parent().undostack.push(AddItem(self.scene(), item))
+        self._undostack.push(AddItem(self.scene(), item))
+        self.finishedEdit.connect(item.registerPosition)
         self._currentItem = item
 
     def deleteCurrentItem(self):
@@ -283,11 +252,12 @@ class Tafelview(QGraphicsView):
         self._verschiebeGeo = self._geodreieck.posInVerschiebegriff(pos)
         self._dreheGeo = self._geodreieck.posInDrehgriff(pos)
         
-        if not self._verschiebeGeo and not self._dreheGeo:
-            pos = self.snapToGeodreieck(pos)
-            self.setLastPos(pos)
-            self.createCurrentItem(pos)
-            self._painting = True
+        if self._status == Status.kreativ:
+            if not self._verschiebeGeo and not self._dreheGeo:
+                pos = self.snapToGeodreieck(pos)
+                self.setLastPos(pos)
+                self.createCurrentItem(pos)
+                self._painting = True
 
     def bearbeitenWeiter(self, pos) -> bool:
         if not self._painting:
@@ -302,7 +272,7 @@ class Tafelview(QGraphicsView):
             self._geodreieck.verschiebe(pos)
             self._painting = True
             return
-        if self._status == Tafelview.statusRadiere:
+        if self._status == Status.radieren:
             self._painting = True
             self.radiere(pos)
             return
@@ -311,7 +281,7 @@ class Tafelview(QGraphicsView):
         if not self._painting:
             self.createCurrentItem(geopos)
             self._painting = True
-        self.mousemoved.emit(geopos)
+        self._currentItem.change(geopos)
     
     def bearbeitenFertig(self,pos) -> bool:
         self._verschiebeGeo = False
@@ -320,18 +290,17 @@ class Tafelview(QGraphicsView):
         if pos:
             geopos = self.snapToGeodreieck(pos)
             if geopos == self._lastPos or not self._painting:   # MouseClick
-                if self._status == Tafelview.statusFreihand:
-                    item = Punkt(self,geopos,self._currentpen,self._currentbrush)
-                    self.parent().undostack.undo()
-                    self.parent().undostack.push(AddItem(self.scene(), item))
-                elif self._status == Tafelview.statusRadiere:
+                if self._status == Status.radieren:
                     self.radiere(geopos)
+                elif self._status == Status.kreativ and self._tool == Werkzeug.Freihand:
+                    item = Punkt(self, geopos, self._drawpen, Qt.NoBrush)
+                    self._undostack.undo()
+                    self._undostack.push(AddItem(self.scene(), item))
         if self._clonedItems:
-            self.parent().undostack.push(ChangePathItems({k: self._clonedItems[k] for k in self._clonedItems}))
+            self._undostack.push(ChangePathItems({k: self._clonedItems[k] for k in self._clonedItems}))
         self._clonedItems = {}
         self._painting = False
         self.setLastPos(None)
-        self.mousereleased.emit()
         self.eswurdegemalt.emit()
 
     def touchPointSize(self, point):
@@ -374,7 +343,7 @@ class Tafelview(QGraphicsView):
             size = Tafelview.RADIERGUMMISIZEBIG
         self._radiergummi = Radiergummi(size/self.transform().m11(), pos)
         self.scene().addItem(self._radiergummi)
-        self.setStatus(Tafelview.statusRadiere)
+        self.setStatus(Status.radieren)
 
     def resizeRadiergummi(self, pointsize):
         if self._radiergummi.size() == Tafelview.RADIERGUMMISIZEBIG:
@@ -405,10 +374,10 @@ class Tafelview(QGraphicsView):
                 self._geodreieck.newPalette(self.palette())
                 return True
             
-            if self._status == Tafelview.statusEdit:
+            if self._status == Status.editieren:
                 if eventtype in [QEvent.TouchCancel,QEvent.TouchEnd,QEvent.MouseButtonRelease]:
-                    self.finishedEdit.emit(self.parent())
-                    self.parent().undostack.push(MoveItem(None, QPointF(), QPointF()))
+                    self.finishedEdit.emit(self._undostack)
+                    self._undostack.push(MoveItem(None, QPointF(), QPointF()))
                 return super().viewportEvent(event)
 
             if eventtype == QEvent.Gesture:
@@ -477,7 +446,11 @@ class Tafelview(QGraphicsView):
             logger.exception(e, exc_info=True)
 
     def resizeEvent(self, event: QResizeEvent):
-        self.resized.emit()
+        self.changeSceneRect()
+        self._btn_bottom.moveToSide()
+        self._btn_top.moveToSide()
+        self._btn_left.moveToSide()
+        self._btn_right.moveToSide()
         return super().resizeEvent(event)
 
     def kalibrierePointSize(self, pointsize):
@@ -510,7 +483,7 @@ class Tafelview(QGraphicsView):
                     self._clonedItems[item] = item.clone()
                 item.removeElements(radierpath)
             if hasattr(item,'path') and callable(item.path) and item.path().elementCount() < 2:
-                self.parent().undostack.push(RemoveItem(self.scene(), item))
+                self._undostack.push(RemoveItem(self.scene(), item))
 
     def berechneSceneRectNeu(self, item: QGraphicsItem):
         # Mögliche Erweiterung des sceneRect berechnen
@@ -534,14 +507,12 @@ class Tafelview(QGraphicsView):
         self._radiergummi = Radiergummi(self._radiersize/self.transform().m11(), QPointF(0,0))
         self.setCustomCursor()
 
-    @Slot()
     def starteKalibrieren(self):
         logger.debug('Kalibriere')
         self._kalibriere = True
         self._countPointsize = 0
         self._mittlerePointsize = 0
     
-    @Slot()
     def deleteItems(self):
         if not self.scene().selectedItems():
             QMessageBox.warning(self, 'Hinweis', 'Bitte wählen Sie Elemente aus.')
@@ -549,16 +520,15 @@ class Tafelview(QGraphicsView):
         for item in self.scene().selectedItems():
             if item == self._geodreieck:
                 continue
-            self.parent().undostack.push(RemoveItem(self.scene(),item))
+            self._undostack.push(RemoveItem(self.scene(),item))
         self.eswurdegemalt.emit()
 
-    @Slot()
     def copyItems(self):
         if not self.scene().selectedItems():
             QMessageBox.warning(self, 'Hinweis', 'Bitte wählen Sie Elemente aus.')
             return
 
-        self.parent().undostack.beginMacro('Kopiere Elemente')
+        self._undostack.beginMacro('Kopiere Elemente')
         funktioniert_nicht = False
         for item in self.scene().selectedItems():
             try:
@@ -567,17 +537,16 @@ class Tafelview(QGraphicsView):
                 self.statusbarinfo.emit('Einige Elemente konnten nicht kopiert werden',1000) # funktioniert nicht
                 funktioniert_nicht = True
                 continue
-            self.parent().undostack.push(AddItem(self.scene(),newitem))
+            self._undostack.push(AddItem(self.scene(),newitem))
             newitem.setSelected(True)
             item.setSelected(False)
-        self.parent().undostack.endMacro()
+        self._undostack.endMacro()
         self.eswurdegemalt.emit()
         if not funktioniert_nicht:
             self.statusbarinfo.emit('Die Elemente sind kopiert. Bitte jetzt verschieben...',5000)
 
-    @Slot(QGraphicsItem)
     def importItem(self, item: QGraphicsItem):
-        self.parent().undostack.push(AddItem(self.scene(), item))
+        self._undostack.push(AddItem(self.scene(), item))
         item.setPos(self.mapToScene(0,0))
         if hasattr(item, 'registerPosition'):
             self.finishedEdit.connect(item.registerPosition)
@@ -615,9 +584,8 @@ class Tafelview(QGraphicsView):
                 self.setSceneRect(scenerect)
             self.translate(-offset, 0)
 
-    @Slot()
     def zoomin(self):
-        if self._status == self.statusEdit:
+        if self._status == Status.editieren:
             if not self.scene().selectedItems():
                 QMessageBox.warning(self, 'Hinweis', 'Bitte wählen Sie Elemente aus.')
                 return
@@ -628,9 +596,8 @@ class Tafelview(QGraphicsView):
         else:
             self.scale(1.1,1.1)
 
-    @Slot()
     def zoomout(self):
-        if self._status == self.statusEdit:
+        if self._status == Status.editieren:
             if not self.scene().selectedItems():
                 QMessageBox.warning(self, 'Hinweis', 'Bitte wählen Sie Elemente aus.')
                 return
@@ -641,9 +608,8 @@ class Tafelview(QGraphicsView):
         else:
             self.scale(1/1.1,1/1.1)
 
-    @Slot()
     def zoomreset(self):
-        if self._status == self.statusEdit:
+        if self._status == Status.editieren:
             if not self.scene().selectedItems():
                 QMessageBox.warning(self, 'Hinweis', 'Bitte wählen Sie Elemente aus.')
                 return
@@ -653,27 +619,24 @@ class Tafelview(QGraphicsView):
         else:
             self.resetTransform()
 
-    @Slot()
     def clearall(self):
         geodreiecksichtbar = False
         if self._geodreieck.scene():
             geodreiecksichtbar = True
             self.scene().removeItem(self._geodreieck)
-        self.parent().undostack.beginMacro('Lösche alles')
+        self._undostack.beginMacro('Lösche alles')
         for item in self.scene().items():
-            self.parent().undostack.push(RemoveItem(self.scene(),item))
-        self.parent().undostack.endMacro()
+            self._undostack.push(RemoveItem(self.scene(),item))
+        self._undostack.endMacro()
         if geodreiecksichtbar:
             self.scene().addItem(self._geodreieck)
         self.eswurdegemalt.emit()
 
-    @Slot()
     def changeSceneRect(self):
         r = self.sceneRect()
         r2 = self.viewport().rect()
         self.scene().setSceneRect(r|r2)
 
-    @Slot(bool)
     def enableGeodreieck(self, enable: bool):
         if enable:
             self.scene().addItem(self._geodreieck)

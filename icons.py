@@ -17,7 +17,7 @@
 
 import logging
 
-from PySide6.QtCore import QByteArray, QSize
+from PySide6.QtCore import QByteArray, QSize, Qt
 from PySide6.QtGui import QColor, QCursor, QImage, QPainter, QPalette, QPixmap, QIcon, QIconEngine
 from PySide6.QtSvg import QSvgRenderer
 from PySide6.QtWidgets import QApplication, QGraphicsItem, QStyleOptionGraphicsItem
@@ -86,12 +86,16 @@ class ColorIconEngine(QIconEngine):
         self._colorname = colorname
 
     def pixmap(self, size: QSize, mode: QIcon.Mode, state: QIcon.State) -> QPixmap:
+        palette = QApplication.instance().palette()
         if self._colorname == 'foreground':
-            color = QApplication.instance().palette().color(QPalette.WindowText)
+            color = palette.color(QPalette.WindowText)
         else:
             color = QColor(self._colorname)
-        if mode == QIcon.Active:
-            color = color.lighter()
+        if mode == QIcon.Disabled:
+            color = palette.color(QPalette.Disabled, QPalette.PlaceholderText)
+        else:
+            if mode == QIcon.Active:
+                color = color.lighter()
         pixmap = QPixmap(size)
         pixmap.fill(color)
         return pixmap
