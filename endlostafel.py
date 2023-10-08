@@ -38,7 +38,7 @@ from undo import UndoWindow
 # Zum Erzeugen der exe:
 # pyinstaller.exe -F -i "oszli-icon.ico" -w endlostafel.py
 
-VERSION='2.13'
+VERSION='2.14'
 
 
 class Editor(QMainWindow):
