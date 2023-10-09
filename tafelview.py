@@ -204,33 +204,36 @@ class Tafelview(QGraphicsView):
 
     def createCurrentItem(self, pos):
         if self._tool == Werkzeug.Freihand:
-            item = Stift(self, pos, self._drawpen, Qt.NoBrush)
+            item = Stift(pos, self._drawpen, Qt.NoBrush)
         elif self._tool == Werkzeug.Linie:
-            item = Linie(self, pos, self._drawpen, Qt.NoBrush)
+            item = Linie(pos, self._drawpen, Qt.NoBrush)
         elif self._tool == Werkzeug.Pfeil:
-            item = Pfeil(self, pos, self._arrowpen, self._drawbrush)
+            item = Pfeil(pos, self._arrowpen, self._drawbrush)
         elif self._tool == Werkzeug.LinieS:
-            item = LinieSnap(self, pos, self._drawpen, Qt.NoBrush)
+            item = LinieSnap(pos, self._drawpen, Qt.NoBrush)
         elif self._tool == Werkzeug.PfeilS:
-            item = PfeilSnap(self, pos, self._arrowpen, self._drawbrush)
+            item = PfeilSnap(pos, self._arrowpen, self._drawbrush)
         elif self._tool == Werkzeug.Kreis:
-            item = Kreis(self, pos, self._drawpen, Qt.NoBrush)
+            item = Kreis(pos, self._drawpen, Qt.NoBrush)
         elif self._tool == Werkzeug.KreisF:
-            item = Kreis(self, pos, Qt.NoPen, self._drawbrush)
+            item = Kreis(pos, Qt.NoPen, self._drawbrush)
         elif self._tool == Werkzeug.Ellipse:
-            item = Ellipse(self, pos, self._drawpen, Qt.NoBrush)
+            item = Ellipse(pos, self._drawpen, Qt.NoBrush)
         elif self._tool == Werkzeug.EllipseF:
-            item = Ellipse(self, pos, Qt.NoPen, self._drawbrush)
+            item = Ellipse(pos, Qt.NoPen, self._drawbrush)
         elif self._tool == Werkzeug.Quadrat:
-            item = Quadrat(self, pos, self._drawpen, Qt.NoBrush)
+            item = Quadrat(pos, self._drawpen, Qt.NoBrush)
         elif self._tool == Werkzeug.QuadratF:
-            item = Quadrat(self, pos, Qt.NoPen, self._drawbrush)
+            item = Quadrat(pos, Qt.NoPen, self._drawbrush)
         elif self._tool == Werkzeug.Rechteck:
-            item = Rechteck(self, pos, self._drawpen, Qt.NoBrush)
+            item = Rechteck(pos, self._drawpen, Qt.NoBrush)
         elif self._tool == Werkzeug.RechteckF:
-            item = Rechteck(self, pos, Qt.NoPen, self._drawbrush)
+            item = Rechteck(pos, Qt.NoPen, self._drawbrush)
         else:
             raise Exception(f'Für das Werkzeug "{self._tool}" gibt es kein Item.')
+
+        if self._colorname == "foreground":
+            item.setColorIsFGColor(True)
 
         self._undostack.push(AddItem(self.scene(), item))
         self.finishedEdit.connect(item.registerPosition)

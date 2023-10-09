@@ -16,23 +16,22 @@
 # along with this program.  If not, see https://www.gnu.org/licenses/.
 
 import logging
+logger = logging.getLogger('GUI')
+
 from math import sqrt, log10
 from typing import Any
 from PySide6.QtCore import QPointF, QRectF, QSizeF, Qt
 from PySide6.QtGui import QBrush, QColor, QPainterPath, QPalette, QPen, QPixmap
 from PySide6.QtSvgWidgets import QGraphicsSvgItem
-from PySide6.QtWidgets import QGraphicsItem, QGraphicsLineItem, QGraphicsPathItem, QGraphicsPixmapItem, QGraphicsRectItem, QGraphicsView, QGraphicsSceneMouseEvent
+from PySide6.QtWidgets import QGraphicsItem, QGraphicsLineItem, QGraphicsPathItem, QGraphicsPixmapItem, QGraphicsRectItem
 
 from undo import MoveItem
 
-logger = logging.getLogger('GUI')
-
 class Pfad(QGraphicsPathItem):
-    def __init__(self, view: QGraphicsView, pos: QPointF, pen: QPen, brush: QBrush):
+    def __init__(self, pos: QPointF, pen: QPen, brush: QBrush):
         super().__init__()
-        self._view = view
+        self._colorisfgcolor = False
         self.setPos(pos)
-        self._fgcolor = view.fgcolor()
         self.setPen(pen)
         self.setBrush(brush)
         self.setPath(QPainterPath())
@@ -44,17 +43,18 @@ class Pfad(QGraphicsPathItem):
         self._shape = None
         self._oldpos = None
 
+    def setColorIsFGColor(self, isfgcolor: bool):
+        self._colorisfgcolor = isfgcolor
+
     def newPalette(self, palette):
         newfgcolor = palette.color(QPalette.WindowText)
         pen = self.pen()
         brush = self.brush()
-        if pen.color() == self._fgcolor:
+        if self._colorisfgcolor:
             pen.setColor(newfgcolor)
             self.setPen(pen)
-        if brush.color() == self._fgcolor:
             brush.setColor(newfgcolor)
             self.setBrush(brush)
-        self._fgcolor = newfgcolor
     
     def change(self):
         self.setTransformOriginPoint(self.boundingRect().center())
@@ -135,8 +135,8 @@ class Pfad(QGraphicsPathItem):
 
 
 class Stift(Pfad):
-    def __init__(self, view: QGraphicsView, pos: QPointF, pen: QPen, brush: QBrush):
-        super().__init__(view, pos, pen, brush)
+    def __init__(self, pos: QPointF, pen: QPen, brush: QBrush):
+        super().__init__(pos, pen, brush)
 
     def change(self, posscene: QPointF):
         pos = self.mapFromScene(posscene)
@@ -147,8 +147,8 @@ class Stift(Pfad):
 
 
 class Linie(Pfad):
-    def __init__(self, view: QGraphicsView, pos: QPointF, pen: QPen, brush: QBrush):
-        super().__init__(view, pos, pen, brush)
+    def __init__(self, pos: QPointF, pen: QPen, brush: QBrush):
+        super().__init__(pos, pen, brush)
 
     def change(self, posscene: QPointF):
         pos = self.mapFromScene(posscene)
@@ -159,8 +159,8 @@ class Linie(Pfad):
 
 
 class LinieSnap(Pfad):
-    def __init__(self, view: QGraphicsView, pos: QPointF, pen: QPen, brush: QBrush):
-        super().__init__(view, pos, pen, brush)
+    def __init__(self, pos: QPointF, pen: QPen, brush: QBrush):
+        super().__init__(pos, pen, brush)
 
     def change(self, posscene: QPointF):
         pos = self.mapFromScene(posscene)
@@ -175,8 +175,8 @@ class LinieSnap(Pfad):
 
 
 class Pfeil(Pfad):
-    def __init__(self, view: QGraphicsView, pos: QPointF, pen: QPen, brush: QBrush):
-        super().__init__(view, pos, pen, brush)
+    def __init__(self, pos: QPointF, pen: QPen, brush: QBrush):
+        super().__init__(pos, pen, brush)
 
     def change(self, posscene: QPointF):
         pos = self.mapFromScene(posscene)
@@ -195,8 +195,8 @@ class Pfeil(Pfad):
 
 
 class PfeilSnap(Pfad):
-    def __init__(self, view: QGraphicsView, pos: QPointF, pen: QPen, brush: QBrush):
-        super().__init__(view, pos, pen, brush)
+    def __init__(self, pos: QPointF, pen: QPen, brush: QBrush):
+        super().__init__(pos, pen, brush)
 
     def change(self, posscene: QPointF):
         pos = self.mapFromScene(posscene)
@@ -219,8 +219,8 @@ class PfeilSnap(Pfad):
 
 
 class Kreis(Pfad):
-    def __init__(self, view: QGraphicsView, pos: QPointF, pen: QPen, brush: QBrush):
-        super().__init__(view, pos, pen, brush)
+    def __init__(self, pos: QPointF, pen: QPen, brush: QBrush):
+        super().__init__(pos, pen, brush)
     
     def change(self, posscene: QPointF):
         pos = self.mapFromScene(posscene)
@@ -236,8 +236,8 @@ class Kreis(Pfad):
 
 
 class Ellipse(Pfad):
-    def __init__(self, view: QGraphicsView, pos: QPointF, pen: QPen, brush: QBrush):
-        super().__init__(view, pos, pen, brush)
+    def __init__(self, pos: QPointF, pen: QPen, brush: QBrush):
+        super().__init__(pos, pen, brush)
 
     def change(self, posscene: QPointF):
         pos = self.mapFromScene(posscene)
@@ -252,8 +252,8 @@ class Ellipse(Pfad):
 
 
 class Quadrat(Pfad):
-    def __init__(self, view: QGraphicsView, pos: QPointF, pen: QPen, brush: QBrush):
-        super().__init__(view, pos, pen, brush)
+    def __init__(self, pos: QPointF, pen: QPen, brush: QBrush):
+        super().__init__(pos, pen, brush)
 
     def change(self, posscene: QPointF):
         pos = self.mapFromScene(posscene)
@@ -271,8 +271,8 @@ class Quadrat(Pfad):
 
 
 class Rechteck(Pfad):
-    def __init__(self, view: QGraphicsView, pos: QPointF, pen: QPen, brush: QBrush):
-        super().__init__(view, pos, pen, brush)
+    def __init__(self, pos: QPointF, pen: QPen, brush: QBrush):
+        super().__init__(pos, pen, brush)
 
     def change(self, posscene: QPointF):
         pos = self.mapFromScene(posscene)
@@ -287,8 +287,8 @@ class Rechteck(Pfad):
 
 
 class Punkt(Pfad):
-    def __init__(self, view: QGraphicsView, pos: QPointF, pen: QPen, brush: QBrush):
-        super().__init__(view, pos, pen, brush)
+    def __init__(self, pos: QPointF, pen: QPen, brush: QBrush):
+        super().__init__(pos, pen, brush)
         path = self.path()
         path.lineTo(.0001,0)
         self.setPath(path)
@@ -296,8 +296,8 @@ class Punkt(Pfad):
 
 
 class Karopapier(Pfad):
-    def __init__(self, view: QGraphicsView):
-        super().__init__(view, QPointF(), Qt.NoPen, Qt.NoBrush)
+    def __init__(self):
+        super().__init__(QPointF(), Qt.NoPen, Qt.NoBrush)
         pen = QPen(QColor('lightblue'))
         pen.setCosmetic(True)
         self.setPen(pen)
@@ -323,8 +323,8 @@ class Karopapier(Pfad):
 
 
 class Linienpapier(Pfad):
-    def __init__(self, view: QGraphicsView):
-        super().__init__(view, QPointF(), Qt.NoPen, Qt.NoBrush)
+    def __init__(self):
+        super().__init__(QPointF(), Qt.NoPen, Qt.NoBrush)
         pen = QPen(QColor('lightblue'))
         pen.setCosmetic(True)
         self.setPen(pen)

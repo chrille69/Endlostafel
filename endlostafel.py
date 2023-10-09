@@ -266,8 +266,8 @@ class Editor(QMainWindow):
         self._tafelview.eswurdegemalt.connect(self.tafelHatGemalt)
         self._tafelview.statusbarinfo.connect(self.statusbarinfo)
         self._tafelview.kalibriert.connect(self.kalibriertSpeichern)
-        self._karopapierAction.triggered.connect(lambda: self._tafelview.importItem(Karopapier(self._tafelview)))
-        self._linienpapierAction.triggered.connect(lambda: self._tafelview.importItem(Linienpapier(self._tafelview)))
+        self._karopapierAction.triggered.connect(lambda: self._tafelview.importItem(Karopapier()))
+        self._linienpapierAction.triggered.connect(lambda: self._tafelview.importItem(Linienpapier()))
         self.displayMemoryUsage()
         
         # Trigger das Standard-Werkzeug freihand
