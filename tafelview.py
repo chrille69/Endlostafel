@@ -20,7 +20,7 @@ logger = logging.getLogger('GUI')
 
 from PySide6 import QtCore
 from PySide6.QtCore import QEvent, QPointF, QRect, QSizeF, Qt, Signal, Slot
-from PySide6.QtGui import QBrush, QColor, QPainter, QPalette, QPen, QResizeEvent, QUndoStack
+from PySide6.QtGui import QBrush, QColor, QPainter, QPalette, QPen, QResizeEvent, QUndoStack, QInputDevice
 from PySide6.QtWidgets import QApplication, QGraphicsRectItem, QGraphicsItem, QGraphicsView, QMessageBox, QToolButton, QWidget, QPinchGesture, QGraphicsScene
 from enum import Enum
 
@@ -54,7 +54,6 @@ class Tafelview(QGraphicsView):
 
     eswurdegemalt = Signal()
     statusbarinfo = Signal(str, int)
-    finishedEdit = Signal(QUndoStack)
     kalibriert = Signal(float)
 
     RADIERGUMMISIZESMALL = QSizeF(30, 60)
@@ -236,7 +235,6 @@ class Tafelview(QGraphicsView):
             item.setColorIsFGColor(True)
 
         self._undostack.push(AddItem(self.scene(), item))
-        self.finishedEdit.connect(item.registerPosition)
         self._currentItem = item
 
     def deleteCurrentItem(self):
@@ -296,7 +294,7 @@ class Tafelview(QGraphicsView):
                 if self._status == Status.radieren:
                     self.radiere(geopos)
                 elif self._status == Status.kreativ and self._tool == Werkzeug.Freihand:
-                    item = Punkt(self, geopos, self._drawpen, Qt.NoBrush)
+                    item = Punkt(geopos, self._drawpen, Qt.NoBrush)
                     self._undostack.undo()
                     self._undostack.push(AddItem(self.scene(), item))
         if self._clonedItems:
@@ -379,8 +377,12 @@ class Tafelview(QGraphicsView):
             
             if self._status == Status.editieren:
                 if eventtype in [QEvent.TouchCancel,QEvent.TouchEnd,QEvent.MouseButtonRelease]:
-                    self.finishedEdit.emit(self._undostack)
-                    self._undostack.push(MoveItem(None, QPointF(), QPointF()))
+                    selectedlist = [item for item in self.scene().selectedItems() if hasattr(item, 'registerPosition') and item.oldPos()]
+                    if selectedlist:
+                        self._undostack.beginMacro('verschobene Elemente')
+                        for item in self.scene().selectedItems():
+                                item.registerPosition(self._undostack)
+                        self._undostack.endMacro()
                 return super().viewportEvent(event)
 
             if eventtype == QEvent.Gesture:
@@ -412,6 +414,7 @@ class Tafelview(QGraphicsView):
                 return True
 
             elif eventtype in [QEvent.TouchCancel,QEvent.TouchEnd]:
+                logger.debug(QInputDevice.devices())
                 self.bearbeitenFertig(self.scenePosFromEvent(event))
                 if self._tmpStatus:
                     self.deaktiviereRadiergummi()
@@ -432,6 +435,7 @@ class Tafelview(QGraphicsView):
                 return True
 
             elif eventtype == QEvent.MouseButtonRelease:
+                logger.debug(QInputDevice.devices())
                 if event.source() == Qt.MouseEventSynthesizedBySystem:
                     return False
                 self.bearbeitenFertig(self.scenePosFromEvent(event))
@@ -551,10 +555,7 @@ class Tafelview(QGraphicsView):
     def importItem(self, item: QGraphicsItem):
         self._undostack.push(AddItem(self.scene(), item))
         item.setPos(self.mapToScene(0,0))
-        if hasattr(item, 'registerPosition'):
-            self.finishedEdit.connect(item.registerPosition)
         self.berechneSceneRectNeu(item)
-
         self.statusbarinfo.emit('Das Element oben links eingefügt. Bitte jetzt verschieben...',5000)
         self.eswurdegemalt.emit() 
 

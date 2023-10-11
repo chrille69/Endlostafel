@@ -23,7 +23,7 @@ from typing import Any
 from PySide6.QtCore import QPointF, QRectF, QSizeF, Qt
 from PySide6.QtGui import QBrush, QColor, QPainterPath, QPalette, QPen, QPixmap
 from PySide6.QtSvgWidgets import QGraphicsSvgItem
-from PySide6.QtWidgets import QGraphicsItem, QGraphicsLineItem, QGraphicsPathItem, QGraphicsPixmapItem, QGraphicsRectItem
+from PySide6.QtWidgets import QGraphicsItem, QGraphicsLineItem, QGraphicsPathItem, QGraphicsPixmapItem, QGraphicsRectItem, QGraphicsTextItem
 
 from undo import MoveItem
 
@@ -42,6 +42,9 @@ class Pfad(QGraphicsPathItem):
         self.setAcceptedMouseButtons(Qt.AllButtons)
         self._shape = None
         self._oldpos = None
+
+    def oldPos(self):
+        return self._oldpos
 
     def setColorIsFGColor(self, isfgcolor: bool):
         self._colorisfgcolor = isfgcolor
@@ -74,7 +77,7 @@ class Pfad(QGraphicsPathItem):
         self._shape = shape
 
     def clone(self):
-        clonepfad = Pfad(self._view, self.pos(), self.pen(), self.brush())
+        clonepfad = Pfad(self.pos(), self.pen(), self.brush())
         clonepfad.setPath(self.path())
         clonepfad.setPos(self.pos())
         clonepfad.setScale(self.scale())
@@ -439,6 +442,9 @@ class Pixelbild(QGraphicsPixmapItem):
         self.setFlag(QGraphicsItem.ItemSendsGeometryChanges, True)
         self._oldpos = None
 
+    def oldPos(self):
+        return self._oldpos
+
     def clone(self):
         pixmap = Pixelbild(self.pixmap())
         pixmap.setPos(self.pos())
@@ -451,9 +457,9 @@ class Pixelbild(QGraphicsPixmapItem):
                 self._oldpos = self.pos()
         return super().itemChange(change, value)
 
-    def registerPosition(self, app):
+    def registerPosition(self, undostack):
         if self._oldpos:
-            app.undostack.push(MoveItem(self, QPointF(self._oldpos), QPointF(self.pos())))
+            undostack.push(MoveItem(self, QPointF(self._oldpos), QPointF(self.pos())))
             self._oldpos = None
 
 
@@ -466,6 +472,9 @@ class SVGBild(QGraphicsSvgItem):
         self.setFlag(QGraphicsItem.ItemSendsGeometryChanges, True)
         self._oldpos = None
 
+    def oldPos(self):
+        return self._oldpos
+
     def clone(self):
         newitem = QGraphicsSvgItem()
         newitem.setSharedRenderer(self.renderer())
@@ -474,6 +483,7 @@ class SVGBild(QGraphicsSvgItem):
         newitem.setPos(self.pos())
         newitem.setFlag(QGraphicsItem.ItemIsMovable, True)
         newitem.setFlag(QGraphicsItem.ItemIsSelectable, True)
+        newitem.setFlag(QGraphicsItem.ItemSendsGeometryChanges, True)
         return newitem
 
     def itemChange(self, change: QGraphicsItem.GraphicsItemChange, value: Any) -> Any:
@@ -482,7 +492,36 @@ class SVGBild(QGraphicsSvgItem):
                 self._oldpos = self.pos()
         return super().itemChange(change, value)
 
-    def registerPosition(self, app):
+    def registerPosition(self, undostack):
         if self._oldpos:
-            app.undostack.push(MoveItem(self, QPointF(self._oldpos), QPointF(self.pos())))
+            undostack.push(MoveItem(self, QPointF(self._oldpos), QPointF(self.pos())))
+            self._oldpos = None
+
+class TextItem(QGraphicsTextItem):
+    def __init__(self):
+        super().__init__()
+        self.setFlag(QGraphicsItem.ItemIsMovable, True)
+        self.setFlag(QGraphicsItem.ItemIsSelectable, True)
+        self.setFlag(QGraphicsItem.ItemSendsGeometryChanges, True)
+        self._oldpos = None
+
+    def oldPos(self):
+        return self._oldpos
+
+    def clone(self):
+        newitem = TextItem()
+        newitem.setHtml(self.toHtml())
+        newitem.setScale(self.scale())
+        newitem.setPos(self.pos())
+        return newitem
+
+    def itemChange(self, change: QGraphicsItem.GraphicsItemChange, value: Any) -> Any:
+        if change == QGraphicsItem.ItemPositionChange:
+            if not self._oldpos:
+                self._oldpos = self.pos()
+        return super().itemChange(change, value)
+
+    def registerPosition(self, undostack):
+        if self._oldpos:
+            undostack.push(MoveItem(self, QPointF(self._oldpos), QPointF(self.pos())))
             self._oldpos = None

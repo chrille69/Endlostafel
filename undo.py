@@ -70,35 +70,13 @@ class MoveItem(QUndoCommand):
         self._item = item
         self._oldpos = oldpos
         self._newpos = newpos
-        self._endOfMerge = False
-        self._items = {}
-        if item:
-            self._items[item] = [oldpos, newpos]
         self.setText('Element verschoben')
-        if not self._item:
-            self.setObsolete(True)
 
-    def id(self) -> int:
-        return 1
-
-    def mergeWith(self, other):
-        if other.id() != self.id() or self._endOfMerge:
-            return False
-        
-        if not other._item:
-            self._endOfMerge = True
-            return False
-        
-        self._items |= other._items
-        return True
-    
     def undo(self):
-        for item, positions in self._items.items():
-            item.setPos(positions[0])
+        self._item.setPos(self._oldpos)
     
     def redo(self):
-        for item, positions in self._items.items():
-            item.setPos(positions[1])
+        self._item.setPos(self._newpos)
 
 class UndoWindow(QDialog):
     def __init__(self, parent: QWidget, undostack: QUndoStack) -> None:

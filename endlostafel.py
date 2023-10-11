@@ -24,11 +24,11 @@ from typing import IO
 from PySide6.QtCore import QLocale, QMarginsF, QSettings, QDate, QTime, QTimer, Qt, Slot
 from PySide6.QtSvg import QSvgGenerator
 from PySide6.QtGui import QAction, QActionGroup, QCloseEvent, QColor, QGuiApplication, QPainter, QPixmap, QPalette, QFont, QUndoStack
-from PySide6.QtWidgets import QApplication, QFileDialog, QGraphicsItem, QGraphicsTextItem, QLabel, QMainWindow, QMenu, QMessageBox, QSizePolicy, QToolBar, QToolButton, QWidget, QWidgetAction, QColorDialog, QUndoView
+from PySide6.QtWidgets import QApplication, QFileDialog, QLabel, QMainWindow, QMenu, QMessageBox, QSizePolicy, QToolBar, QToolButton, QWidget, QWidgetAction, QColorDialog, QUndoView
 
 
 from icons import ColorIcon, SVGIcon
-from items import Pixelbild, SVGBild, Karopapier, Linienpapier
+from items import Pixelbild, SVGBild, Karopapier, Linienpapier, TextItem
 from vordrucke import MmLogDialog
 from tafelview import Tafelview, Werkzeug, Status
 from paletten import dark as paletteDark, light as paletteLight
@@ -38,7 +38,7 @@ from undo import UndoWindow
 # Zum Erzeugen der exe:
 # pyinstaller.exe -F -i "oszli-icon.ico" -w endlostafel.py
 
-VERSION='2.14'
+VERSION='2.15'
 
 
 class Editor(QMainWindow):
@@ -458,15 +458,12 @@ class Editor(QMainWindow):
             item = Pixelbild(QPixmap(mimeData.imageData()))
             self._tafelview.importItem(item)
         elif mimeData.hasHtml():
-            item = QGraphicsTextItem()
+            item = TextItem()
             item.setHtml(mimeData.html())
-            item.setFlag(QGraphicsItem.ItemIsMovable, True)
-            item.setFlag(QGraphicsItem.ItemIsSelectable, True)            
             self._tafelview.importItem(item)
         elif mimeData.hasText():
-            item = QGraphicsTextItem(mimeData.text())
-            item.setFlag(QGraphicsItem.ItemIsMovable, True)
-            item.setFlag(QGraphicsItem.ItemIsSelectable, True)            
+            item = TextItem()
+            item.setPlainText(mimeData.text())
             self._tafelview.importItem(item)
 
     def showHelp(self):
